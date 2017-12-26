@@ -1,4 +1,4 @@
-# BRM-EasyBake
+# BRM-BakeUI
 Texture baking UI for Blender
 
 Very WIP, will add detailed instructions in the near future.
@@ -14,3 +14,5 @@ For now:
 -in hipoly enter the name of you hipoly object or group
 
 -select the maps you want to bake out, and bake them to your desired folder!
+
+-baked textures will automatically update in Blender, so assign them to your lowpoly mesh's material for a quick iterative workflow.
