@@ -1,0 +1,481 @@
+#this script is dedicated to the public domain under CC0 (https://creativecommons.org/publicdomain/zero/1.0/)
+#do whatever you want with it! -Bram
+
+bl_info = {
+    "name": "BRM_BakeUI",
+    "category": "3D View",
+    "author": "Bram Eulaers",
+    "description": "Simple texture baking UI for fast iteration. Can be found in the Tools panel."
+    }
+
+import bpy
+import os
+import bmesh
+from bpy.props import EnumProperty, BoolProperty, StringProperty, FloatProperty, IntProperty
+
+class BRM_BakeUIPanel(bpy.types.Panel):
+    """BRM_BakeUIPanel Panel"""
+    bl_label = "BRM Bake"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'TOOLS'
+    bl_region_type = "TOOLS"
+    bl_category = "Bake"
+
+
+    def draw_header(self, _):
+        layout = self.layout
+        layout.label(text="", icon='RADIO')
+
+    def draw(self, context):
+        layout = self.layout
+
+        col = layout.column(align=True)
+        row = col.row(align = True)
+        row.prop(context.scene, "lowpoly", text="", icon="MESH_ICOSPHERE")
+        if context.scene.lowpolyActive is True:
+            hideicon = "RESTRICT_VIEW_OFF"
+        if context.scene.lowpolyActive is False:
+            hideicon = "RESTRICT_VIEW_ON"
+        op = row.operator("brm.bakeuihide", text="", icon=hideicon)
+        op.targetmesh = "lowpoly"
+        
+        row = col.row(align = True)
+        row.prop(context.scene, "hipoly", text="", icon="MESH_UVSPHERE")
+        if context.scene.hipolyActive is True:
+            hideicon = "RESTRICT_VIEW_OFF"
+        if context.scene.hipolyActive is False:
+            hideicon = "RESTRICT_VIEW_ON"
+        op = row.operator("brm.bakeuihide", text="", icon=hideicon)
+        op.targetmesh = "hipoly"
+
+        col = layout.column(align=True)
+        row = col.row(align = True)
+        row.operator("brm.bakeuitoggle", text="Toggle hi/low", icon="LAMP")
+        row.prop(context.scene, "UseBlenderGame", icon="LOGIC", text="")
+        
+        col = layout.column(align=True)
+        col.prop(context.scene.render.bake, "cage_extrusion", text="Ray Distance")
+        col.prop(context.scene.render.bake, "margin")
+
+        col = layout.column(align=True)
+        row = col.row(align = True)
+        row.label(text="Width:")
+        row.prop(context.scene, "bakeWidth", text="")
+        row = col.row(align = True)
+        row.label(text="Height:")
+        row.prop(context.scene, "bakeHeight", text="")
+
+        col = layout.column(align=True)
+        col.prop(context.scene, 'bakeFolder', text="")
+
+        col = layout.column(align=True)
+        row = col.row(align = True)
+        row.prop(context.scene, "bakeNormal", icon="COLOR", text="Tangent Normal")
+        if context.scene.bakeNormal:
+            row.prop(context.scene, "samplesNormal", text="")
+        row = col.row(align = True)
+        row.prop(context.scene, "bakeObject", icon="WORLD", text="Object Normal")
+        if context.scene.bakeObject:
+            row.prop(context.scene, "samplesObject", text="")
+        row = col.row(align = True)
+        row.prop(context.scene, "bakeAO", icon="MATSPHERE", text="Occlusion")
+        if context.scene.bakeAO:
+            row.prop(context.scene, "samplesAO", text="")
+        row = col.row(align = True)
+        row.prop(context.scene, "bakeColor", icon="COLOR_GREEN", text="Color")
+        row = col.row(align = True)
+        row.prop(context.scene, "bakeUV", icon="TEXTURE_SHADED", text="UV Snapshot")
+        col = layout.column(align=True)
+        row = col.row(align = True)
+        op = row.operator("brm.bake", text="BAKE", icon="RENDER_STILL")
+
+class BRM_BakeUIToggle(bpy.types.Operator):
+    """toggle lowpoly/hipoly"""
+    bl_idname = "brm.bakeuitoggle"
+    bl_label = "Toggle"
+    bl_options = {"UNDO"}
+
+    def execute(self, context):
+
+        if bpy.context.object.mode == 'EDIT':
+            bpy.ops.object.mode_set(mode='OBJECT')
+
+        #test lowpoly/hipoly exists
+        if bpy.data.objects.get(context.scene.lowpoly) is None:
+            self.report({'WARNING'}, "Select a valid lowpoly object!")
+            return {'FINISHED'}
+        if bpy.data.objects.get(context.scene.hipoly) is None and not context.scene.hipoly in bpy.data.groups:
+            self.report({'WARNING'}, "Select a valid hipoly object or group!")
+            return {'FINISHED'}
+
+        if context.scene.lowpolyActive is True:
+            bpy.data.scenes["Scene"].render.engine = "CYCLES"
+            context.scene.lowpolyActive = False
+            bpy.data.objects[context.scene.lowpoly].hide = True
+
+            context.scene.hipolyActive = True
+            if bpy.data.objects.get(context.scene.hipoly) is None:
+                for o in bpy.data.groups[context.scene.hipoly].objects:
+                    o.hide = False
+            else:
+                bpy.data.objects[context.scene.hipoly].hide = False
+
+        else:
+            if context.scene.UseBlenderGame:
+                bpy.data.scenes["Scene"].render.engine = "BLENDER_GAME"
+            context.scene.lowpolyActive = True
+            bpy.data.objects[context.scene.lowpoly].hide = False
+
+            context.scene.hipolyActive = False
+            if bpy.data.objects.get(context.scene.hipoly) is None:
+                for o in bpy.data.groups[context.scene.hipoly].objects:
+                    o.hide = True
+            else:
+                bpy.data.objects[context.scene.hipoly].hide = True
+
+        return {'FINISHED'}
+
+
+class BRM_BakeUIHide(bpy.types.Operator):
+    """hide object"""
+    bl_idname = "brm.bakeuihide"
+    bl_label = "hide"
+    bl_options = {"UNDO"}
+
+    targetmesh = bpy.props.StringProperty()
+
+    def execute(self, context):
+
+        #test lowpoly/hipoly exists
+        
+        if bpy.context.object.mode == 'EDIT':
+            bpy.ops.object.mode_set(mode='OBJECT')
+        
+
+        if self.targetmesh == "lowpoly":
+
+            if bpy.data.objects.get(context.scene.lowpoly) is None:
+                self.report({'WARNING'}, "Select a valid lowpoly object!")
+                return {'FINISHED'}
+            else:
+
+                if context.scene.lowpolyActive is True:
+                    context.scene.lowpolyActive = False
+                    bpy.data.objects[context.scene.lowpoly].hide = True
+                else:
+                    context.scene.lowpolyActive = True
+                    bpy.data.objects[context.scene.lowpoly].hide = False
+
+        if self.targetmesh == "hipoly":
+
+            if bpy.data.objects.get(context.scene.hipoly) is None and not context.scene.hipoly in bpy.data.groups:
+                self.report({'WARNING'}, "Select a valid hipoly object or group!")
+                return {'FINISHED'}
+
+            else:
+
+                if context.scene.hipolyActive is True:
+                    context.scene.hipolyActive = False
+                    if bpy.data.objects.get(context.scene.hipoly) is None:
+                        for o in bpy.data.groups[context.scene.hipoly].objects:
+                            o.hide = True
+                    else:
+                        bpy.data.objects[context.scene.hipoly].hide = True
+
+                else:
+                    context.scene.hipolyActive = True
+                    if bpy.data.objects.get(context.scene.hipoly) is None:
+                        for o in bpy.data.groups[context.scene.hipoly].objects:
+                            o.hide = False
+                    else:
+                        bpy.data.objects[context.scene.hipoly].hide = False
+
+        return {'FINISHED'}
+
+
+class BRM_Bake(bpy.types.Operator):
+    """Bake and save textures"""
+    bl_idname = "brm.bake"
+    bl_label = "set normal"
+    bl_options = {"UNDO"}
+    
+
+    def execute(self, context):  
+        
+        #test if everything is set up OK first:
+        #test folder
+        hasfolder = os.access(context.scene.bakeFolder, os.W_OK)
+        if hasfolder is False:
+            self.report({'WARNING'}, "Select a valid export folder!")
+            return {'FINISHED'}
+        #test lowpoly/hipoly exists
+        if bpy.data.objects.get(context.scene.lowpoly) is None:
+            self.report({'WARNING'}, "Select a valid lowpoly object!")
+            return {'FINISHED'}
+        if bpy.data.objects.get(context.scene.hipoly) is None and not context.scene.hipoly in bpy.data.groups:
+            self.report({'WARNING'}, "Select a valid hipoly object or group!")
+            return {'FINISHED'}
+        #test if lowpoly has a material
+        if len(bpy.data.objects[context.scene.lowpoly].data.materials) == 0:
+            self.report({'WARNING'}, "Material required on low poly mesh!")
+            return {'FINISHED'}
+        if len(bpy.data.objects[context.scene.lowpoly].data.uv_layers) == 0:
+            self.report({'WARNING'}, "low poly mesh has no UV!")
+            return {'FINISHED'}
+
+        #setup
+        if bpy.context.object.mode == 'EDIT':
+            bpy.ops.object.mode_set(mode='OBJECT')
+
+        bpy.ops.object.select_all(action='DESELECT')
+
+        #select lowpoly
+        bpy.data.objects[context.scene.lowpoly].hide = False
+        bpy.data.objects[context.scene.lowpoly].select = True
+        orig_lowpoly = bpy.data.objects[context.scene.lowpoly]
+
+        orig_renderer = bpy.data.scenes["Scene"].render.engine
+        bpy.data.scenes["Scene"].render.engine = "CYCLES"
+
+        #create bake image and material
+        bakeimage = bpy.data.images.new("BakeImage", width=context.scene.bakeWidth, height=context.scene.bakeHeight)
+        bakemat = bpy.data.materials.new(name="bakemat")
+        bakemat.use_nodes = True
+
+        #select hipoly object or group:
+        if bpy.data.objects.get(context.scene.hipoly) is None:
+            #bpy.data.groups[context.scene.hipoly].select = True
+            for o in bpy.data.groups[context.scene.hipoly].objects:
+                o.hide = False
+                o.select = True
+            #return {'FINISHED'}
+        else:
+            bpy.data.objects[context.scene.hipoly].hide = False
+            bpy.data.objects[context.scene.hipoly].select = True
+
+        bpy.context.scene.objects.active = bpy.data.objects[context.scene.lowpoly]
+
+        orig_mat = bpy.context.active_object.data.materials[0]
+        bpy.context.active_object.data.materials[0] = bakemat
+
+        node_tree = bakemat.node_tree
+        node = node_tree.nodes.new("ShaderNodeTexImage")
+        node.select = True
+        node_tree.nodes.active = node
+
+        node.image = bakeimage
+
+
+        if context.scene.bakeNormal:
+
+            bpy.context.scene.cycles.samples = context.scene.samplesNormal
+
+            bpy.ops.object.bake(type='NORMAL', use_clear=True, use_selected_to_active=True, normal_space='TANGENT')
+
+            bakeimage.filepath_raw = context.scene.bakeFolder+"export_normal.tga"
+            bakeimage.file_format = 'TARGA'
+            bakeimage.save()
+        
+        if context.scene.bakeObject:
+
+            bpy.context.scene.cycles.samples = context.scene.samplesObject
+
+            bpy.ops.object.bake(type='NORMAL', use_clear=True, use_selected_to_active=True, normal_space='OBJECT')
+
+            bakeimage.filepath_raw = context.scene.bakeFolder+"export_object.tga"
+            bakeimage.file_format = 'TARGA'
+            bakeimage.save()
+
+        if context.scene.bakeAO:
+
+            bpy.context.scene.cycles.samples = context.scene.samplesAO
+
+            bpy.ops.object.bake(type='AO', use_clear=True, use_selected_to_active=True)
+
+            bakeimage.filepath_raw = context.scene.bakeFolder+"export_ao.tga"
+            bakeimage.file_format = 'TARGA'
+            bakeimage.save()
+
+        if context.scene.bakeColor:
+
+            bpy.context.scene.cycles.samples = 1
+            bpy.context.scene.render.bake.use_pass_direct = False
+            bpy.context.scene.render.bake.use_pass_indirect = False
+            bpy.context.scene.render.bake.use_pass_color = True
+
+            bpy.ops.object.bake(type='DIFFUSE', use_clear=True, use_selected_to_active=True)
+
+            bakeimage.filepath_raw = context.scene.bakeFolder+"export_color.tga"
+            bakeimage.file_format = 'TARGA'
+            bakeimage.save()
+
+
+        #return
+        bpy.data.images.remove(bakeimage)
+        bakemat.node_tree.nodes.remove(node)
+        bpy.data.materials.remove(bakemat)
+
+        #reset
+        bpy.data.scenes["Scene"].render.engine = orig_renderer
+        bpy.context.active_object.data.materials[0] = orig_mat
+
+        bpy.ops.object.select_all(action='DESELECT')
+        orig_lowpoly.select = True
+
+
+        for image in bpy.data.images:
+            image.reload()
+        
+        
+        #UV SNAPSHOT
+        if context.scene.bakeUV:
+            bpy.ops.object.editmode_toggle()
+            bpy.ops.mesh.select_all(action='SELECT')
+            bpy.ops.object.editmode_toggle()
+            original_type = bpy.context.area.type
+            bpy.context.area.type = "IMAGE_EDITOR"
+            uvfilepath = context.scene.bakeFolder+"export_uv.png"
+            bpy.ops.uv.export_layout(filepath=uvfilepath, size=(context.scene.bakeWidth, context.scene.bakeHeight))
+            bpy.context.area.type = original_type
+
+        #rehide back to original state
+        if context.scene.lowpolyActive is True:
+            bpy.data.objects[context.scene.lowpoly].hide = False
+        else:
+            bpy.data.objects[context.scene.lowpoly].hide = True
+
+        if context.scene.hipolyActive is True:
+            if bpy.data.objects.get(context.scene.hipoly) is None:
+                for o in bpy.data.groups[context.scene.hipoly].objects:
+                    o.hide = False
+            else:
+                bpy.data.objects[context.scene.hipoly].hide = False
+        else:
+            if bpy.data.objects.get(context.scene.hipoly) is None:
+                for o in bpy.data.groups[context.scene.hipoly].objects:
+                    o.hide = True
+            else:
+                bpy.data.objects[context.scene.hipoly].hide = True
+
+        return {'FINISHED'}
+
+
+def register():
+    bpy.utils.register_class(BRM_Bake)
+    bpy.utils.register_class(BRM_BakeUIHide)
+    bpy.utils.register_class(BRM_BakeUIPanel)
+    bpy.utils.register_class(BRM_BakeUIToggle)
+
+    bpy.types.Scene.lowpoly = bpy.props.StringProperty (
+        name = "lowpoly",
+        default = "lowpoly",
+        description = "lowpoly object",
+        )
+    bpy.types.Scene.lowpolyActive = bpy.props.BoolProperty (
+        name = "lowpolyActive",
+        default = True,
+        description = "lowpolyActive",
+        )
+    bpy.types.Scene.hipoly = bpy.props.StringProperty (
+        name = "hipoly",
+        default = "hipoly",
+        description = "hipoly object or group",
+        )
+    bpy.types.Scene.hipolyActive = bpy.props.BoolProperty (
+        name = "hipolyActive",
+        default = True,
+        description = "hipolyActive",
+        )
+    bpy.types.Scene.bakeNormal = bpy.props.BoolProperty (
+        name = "bakeNormal",
+        default = False,
+        description = "Bake Tangent Space Normal Map",
+        )
+    bpy.types.Scene.bakeObject = bpy.props.BoolProperty (
+        name = "bakeObject",
+        default = False,
+        description = "Bake Object Space Normal Map",
+        )
+    bpy.types.Scene.bakeAO = bpy.props.BoolProperty (
+        name = "bakeAO",
+        default = False,
+        description = "Bake Ambient Occlusion Map",
+        )
+    bpy.types.Scene.bakeColor = bpy.props.BoolProperty (
+        name = "bakeColor",
+        default = False,
+        description = "Bake Albedo Color Map",
+        )
+    bpy.types.Scene.bakeUV = bpy.props.BoolProperty (
+        name = "bakeUV",
+        default = False,
+        description = "Bake UV Wireframe Snapshot of Lowpoly Mesh",
+        )
+    bpy.types.Scene.samplesNormal = bpy.props.IntProperty (
+        name = "samplesNormal",
+        default = 8,
+        description = "Tangent Space Normal Map Sample Count",
+        )
+    bpy.types.Scene.samplesObject = bpy.props.IntProperty (
+        name = "samplesObject",
+        default = 8,
+        description = "Object Space Normal Map Sample Count",
+        )
+    bpy.types.Scene.samplesAO = bpy.props.IntProperty (
+        name = "samplesAO",
+        default = 128,
+        description = "Ambient Occlusion Map Sample Count",
+        )
+    bpy.types.Scene.samplesColor = bpy.props.IntProperty (
+        name = "samplesColor",
+        default = 1,
+        description = "samplesColor",
+        )
+    bpy.types.Scene.bakeWidth = bpy.props.IntProperty (
+        name = "bakeWidth",
+        default = 1024,
+        description = "Export Texture Width",
+        )  
+    bpy.types.Scene.bakeHeight = bpy.props.IntProperty (
+        name = "bakeHeight",
+        default = 1024,
+        description = "Export Texture Height",
+        )
+    bpy.types.Scene.bakeFolder = bpy.props.StringProperty (
+        name = "bakeFolder",
+        default = "destination folder",
+        description = "bakeFolder",
+        subtype = 'DIR_PATH'
+        )
+    bpy.types.Scene.UseBlenderGame = bpy.props.BoolProperty (
+        name = "UseBlenderGame",
+        default = True,
+        description = "Use Blender Game for lowpoly display",
+        )
+
+def unregister():
+    bpy.utils.unregister_class(BRM_Bake)
+    bpy.utils.unregister_class(BRM_BakeUIHide)
+    bpy.utils.unregister_class(BRM_BakeUIPanel)
+    bpy.utils.unregister_class(BRM_BakeUIToggle)
+
+    del bpy.types.Scene.lowpoly
+    del bpy.types.Scene.lowpolyActive
+    del bpy.types.Scene.hipoly
+    del bpy.types.Scene.hipolyActive
+    del bpy.types.Scene.bakeNormal
+    del bpy.types.Scene.bakeObject
+    del bpy.types.Scene.bakeAO
+    del bpy.types.Scene.bakeColor
+    del bpy.types.Scene.bakeUV
+    del bpy.types.Scene.samplesNormal
+    del bpy.types.Scene.samplesAO
+    del bpy.types.Scene.samplesColor
+    del bpy.types.Scene.samplesObject
+    del bpy.types.Scene.bakeWidth
+    del bpy.types.Scene.bakeHeight
+    del bpy.types.Scene.bakeFolder
+    del bpy.types.Scene.UseBlenderGame
+    
+if __name__ == "__main__":
+    register()
