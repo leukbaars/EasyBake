@@ -31,7 +31,8 @@ class BRM_BakeUIPanel(bpy.types.Panel):
 
         col = layout.column(align=True)
         row = col.row(align = True)
-        row.prop(context.scene, "lowpoly", text="", icon="MESH_ICOSPHERE")
+        #row.prop(context.scene, "lowpoly", text="", icon="MESH_ICOSPHERE")
+        row.prop_search(context.scene, "lowpoly", context.scene, "objects", text="", icon="MESH_ICOSPHERE")
         if context.scene.lowpolyActive is True:
             hideicon = "RESTRICT_VIEW_OFF"
         if context.scene.lowpolyActive is False:
@@ -40,7 +41,18 @@ class BRM_BakeUIPanel(bpy.types.Panel):
         op.targetmesh = "lowpoly"
         
         row = col.row(align = True)
-        row.prop(context.scene, "hipoly", text="", icon="MESH_UVSPHERE")
+        #row.prop(context.scene, "hipoly", text="", icon="MESH_UVSPHERE")
+        #row.prop(context.scene, "hipolygroup", text="", icon="MESH_UVSPHERE")
+        
+        if context.scene.hipolyGroup is True:
+            row.prop_search(context.scene, "hipoly", bpy.data, "groups", text="", icon="MESH_UVSPHERE")
+        if context.scene.hipolyGroup is False:
+            row.prop_search(context.scene, "hipoly", context.scene, "objects", text="", icon="MESH_UVSPHERE")
+
+        row.prop(context.scene, "hipolyGroup", text="", icon="GROUP")
+        #op = row.operator("brm.bakeuihide", text="", icon=hideicon)
+
+        #, icon="MESH_UVSPHERE"
         if context.scene.hipolyActive is True:
             hideicon = "RESTRICT_VIEW_OFF"
         if context.scene.hipolyActive is False:
@@ -66,7 +78,11 @@ class BRM_BakeUIPanel(bpy.types.Panel):
         row.prop(context.scene, "bakeHeight", text="")
 
         col = layout.column(align=True)
+        
         col.prop(context.scene, 'bakeFolder', text="")
+        row = col.row(align = True)
+        row.label(text="Filename:")
+        row.prop(context.scene, "bakePrefix", text="")
 
         col = layout.column(align=True)
         row = col.row(align = True)
@@ -272,7 +288,7 @@ class BRM_Bake(bpy.types.Operator):
 
             bpy.ops.object.bake(type='NORMAL', use_clear=True, use_selected_to_active=True, normal_space='TANGENT')
 
-            bakeimage.filepath_raw = context.scene.bakeFolder+"export_normal.tga"
+            bakeimage.filepath_raw = context.scene.bakeFolder+context.scene.bakePrefix+"_normal.tga"
             bakeimage.file_format = 'TARGA'
             bakeimage.save()
         
@@ -282,7 +298,7 @@ class BRM_Bake(bpy.types.Operator):
 
             bpy.ops.object.bake(type='NORMAL', use_clear=True, use_selected_to_active=True, normal_space='OBJECT')
 
-            bakeimage.filepath_raw = context.scene.bakeFolder+"export_object.tga"
+            bakeimage.filepath_raw = context.scene.bakeFolder+context.scene.bakePrefix+"_object.tga"
             bakeimage.file_format = 'TARGA'
             bakeimage.save()
 
@@ -292,7 +308,7 @@ class BRM_Bake(bpy.types.Operator):
 
             bpy.ops.object.bake(type='AO', use_clear=True, use_selected_to_active=True)
 
-            bakeimage.filepath_raw = context.scene.bakeFolder+"export_ao.tga"
+            bakeimage.filepath_raw = context.scene.bakeFolder+context.scene.bakePrefix+"_ao.tga"
             bakeimage.file_format = 'TARGA'
             bakeimage.save()
 
@@ -305,7 +321,7 @@ class BRM_Bake(bpy.types.Operator):
 
             bpy.ops.object.bake(type='DIFFUSE', use_clear=True, use_selected_to_active=True)
 
-            bakeimage.filepath_raw = context.scene.bakeFolder+"export_color.tga"
+            bakeimage.filepath_raw = context.scene.bakeFolder+context.scene.bakePrefix+"_color.tga"
             bakeimage.file_format = 'TARGA'
             bakeimage.save()
 
@@ -334,7 +350,7 @@ class BRM_Bake(bpy.types.Operator):
             bpy.ops.object.editmode_toggle()
             original_type = bpy.context.area.type
             bpy.context.area.type = "IMAGE_EDITOR"
-            uvfilepath = context.scene.bakeFolder+"export_uv.png"
+            uvfilepath = context.scene.bakeFolder+context.scene.bakePrefix+"_uv.png"
             bpy.ops.uv.export_layout(filepath=uvfilepath, size=(context.scene.bakeWidth, context.scene.bakeHeight))
             bpy.context.area.type = original_type
 
@@ -385,6 +401,11 @@ def register():
         name = "hipolyActive",
         default = True,
         description = "hipolyActive",
+        )
+    bpy.types.Scene.hipolyGroup = bpy.props.BoolProperty (
+        name = "hipolyGroup",
+        default = False,
+        description = "enable group selection",
         )
     bpy.types.Scene.bakeNormal = bpy.props.BoolProperty (
         name = "bakeNormal",
@@ -441,10 +462,15 @@ def register():
         default = 1024,
         description = "Export Texture Height",
         )
+    bpy.types.Scene.bakePrefix = bpy.props.StringProperty (
+        name = "bakePrefix",
+        default = "export",
+        description = "export filename",
+        )
     bpy.types.Scene.bakeFolder = bpy.props.StringProperty (
         name = "bakeFolder",
         default = "destination folder",
-        description = "bakeFolder",
+        description = "destination folder",
         subtype = 'DIR_PATH'
         )
     bpy.types.Scene.UseBlenderGame = bpy.props.BoolProperty (
