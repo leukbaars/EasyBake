@@ -29,7 +29,9 @@ class BRM_BakeUIPanel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
 
-        col = layout.column(align=True)
+        box = layout.box()
+        col = box.column(align=True)
+
         row = col.row(align = True)
         #row.prop(context.scene, "lowpoly", text="", icon="MESH_ICOSPHERE")
         row.prop_search(context.scene, "lowpoly", context.scene, "objects", text="", icon="MESH_ICOSPHERE")
@@ -60,22 +62,34 @@ class BRM_BakeUIPanel(bpy.types.Panel):
         op = row.operator("brm.bakeuihide", text="", icon=hideicon)
         op.targetmesh = "hipoly"
 
-        col = layout.column(align=True)
+        col = box.column(align=True)
         row = col.row(align = True)
         row.operator("brm.bakeuitoggle", text="Toggle hi/low", icon="LAMP")
         row.prop(context.scene, "UseBlenderGame", icon="LOGIC", text="")
         
+        
+
         col = layout.column(align=True)
+
+        col.separator()
+
         col.prop(context.scene.render.bake, "cage_extrusion", text="Ray Distance")
         col.prop(context.scene.render.bake, "margin")
 
-        col = layout.column(align=True)
+        box = layout.box()
+        col = box.column(align=True)
+
         row = col.row(align = True)
         row.label(text="Width:")
+        row.operator("brm.bakeuiincrement", text="", icon="ZOOMOUT").target = "width/2"
         row.prop(context.scene, "bakeWidth", text="")
+        row.operator("brm.bakeuiincrement", text="", icon="ZOOMIN").target = "width*2"
+        
         row = col.row(align = True)
         row.label(text="Height:")
+        row.operator("brm.bakeuiincrement", text="", icon="ZOOMOUT").target = "height/2"
         row.prop(context.scene, "bakeHeight", text="")
+        row.operator("brm.bakeuiincrement", text="", icon="ZOOMIN").target = "height*2"
 
         col = layout.column(align=True)
         
@@ -83,13 +97,20 @@ class BRM_BakeUIPanel(bpy.types.Panel):
         row = col.row(align = True)
         row.label(text="Filename:")
         row.prop(context.scene, "bakePrefix", text="")
+        
+        col.separator()
 
-        col = layout.column(align=True)
+        box = layout.box()
+        col = box.column(align=True)
+        
         row = col.row(align = True)
+        row.enabled = not context.scene.UseLowOnly
         row.prop(context.scene, "bakeNormal", icon="COLOR", text="Tangent Normal")
         if context.scene.bakeNormal:
             row.prop(context.scene, "samplesNormal", text="")
+
         row = col.row(align = True)
+        row.enabled = not context.scene.UseLowOnly
         row.prop(context.scene, "bakeObject", icon="WORLD", text="Object Normal")
         if context.scene.bakeObject:
             row.prop(context.scene, "samplesObject", text="")
@@ -97,13 +118,18 @@ class BRM_BakeUIPanel(bpy.types.Panel):
         row.prop(context.scene, "bakeAO", icon="MATSPHERE", text="Occlusion")
         if context.scene.bakeAO:
             row.prop(context.scene, "samplesAO", text="")
+        
         row = col.row(align = True)
+        row.enabled = not context.scene.UseLowOnly
         row.prop(context.scene, "bakeColor", icon="COLOR_GREEN", text="Color")
+
         row = col.row(align = True)
         row.prop(context.scene, "bakeUV", icon="TEXTURE_SHADED", text="UV Snapshot")
         col = layout.column(align=True)
         row = col.row(align = True)
         op = row.operator("brm.bake", text="BAKE", icon="RENDER_STILL")
+        row.prop(context.scene, "UseLowOnly", icon="MESH_ICOSPHERE", text="")
+        
 
 class BRM_BakeUIToggle(bpy.types.Operator):
     """toggle lowpoly/hipoly"""
@@ -151,6 +177,23 @@ class BRM_BakeUIToggle(bpy.types.Operator):
 
         return {'FINISHED'}
 
+class BRM_BakeUIIncrement(bpy.types.Operator):
+    """multiply/divide value"""
+    bl_idname = "brm.bakeuiincrement"
+    bl_label = "increment"
+
+    target = bpy.props.StringProperty()
+
+    def execute(self, context):
+        if self.target == "width/2" and context.scene.bakeWidth > 4:
+            context.scene.bakeWidth = context.scene.bakeWidth / 2
+        if self.target == "width*2":
+            context.scene.bakeWidth = context.scene.bakeWidth * 2
+        if self.target == "height/2" and context.scene.bakeHeight > 4:
+            context.scene.bakeHeight = context.scene.bakeHeight / 2
+        if self.target == "height*2":
+            context.scene.bakeHeight = context.scene.bakeHeight * 2
+        return {'FINISHED'}
 
 class BRM_BakeUIHide(bpy.types.Operator):
     """hide object"""
@@ -258,16 +301,17 @@ class BRM_Bake(bpy.types.Operator):
         bakemat = bpy.data.materials.new(name="bakemat")
         bakemat.use_nodes = True
 
+        if not context.scene.UseLowOnly:
         #select hipoly object or group:
-        if bpy.data.objects.get(context.scene.hipoly) is None:
-            #bpy.data.groups[context.scene.hipoly].select = True
-            for o in bpy.data.groups[context.scene.hipoly].objects:
-                o.hide = False
-                o.select = True
-            #return {'FINISHED'}
-        else:
-            bpy.data.objects[context.scene.hipoly].hide = False
-            bpy.data.objects[context.scene.hipoly].select = True
+            if bpy.data.objects.get(context.scene.hipoly) is None:
+                #bpy.data.groups[context.scene.hipoly].select = True
+                for o in bpy.data.groups[context.scene.hipoly].objects:
+                    o.hide = False
+                    o.select = True
+                #return {'FINISHED'}
+            else:
+                bpy.data.objects[context.scene.hipoly].hide = False
+                bpy.data.objects[context.scene.hipoly].select = True
 
         bpy.context.scene.objects.active = bpy.data.objects[context.scene.lowpoly]
 
@@ -282,7 +326,7 @@ class BRM_Bake(bpy.types.Operator):
         node.image = bakeimage
 
 
-        if context.scene.bakeNormal:
+        if context.scene.bakeNormal and not context.scene.UseLowOnly:
 
             bpy.context.scene.cycles.samples = context.scene.samplesNormal
 
@@ -292,7 +336,7 @@ class BRM_Bake(bpy.types.Operator):
             bakeimage.file_format = 'TARGA'
             bakeimage.save()
         
-        if context.scene.bakeObject:
+        if context.scene.bakeObject and not context.scene.UseLowOnly:
 
             bpy.context.scene.cycles.samples = context.scene.samplesObject
 
@@ -306,13 +350,13 @@ class BRM_Bake(bpy.types.Operator):
 
             bpy.context.scene.cycles.samples = context.scene.samplesAO
 
-            bpy.ops.object.bake(type='AO', use_clear=True, use_selected_to_active=True)
+            bpy.ops.object.bake(type='AO', use_clear=True, use_selected_to_active=not context.scene.UseLowOnly)
 
             bakeimage.filepath_raw = context.scene.bakeFolder+context.scene.bakePrefix+"_ao.tga"
             bakeimage.file_format = 'TARGA'
             bakeimage.save()
 
-        if context.scene.bakeColor:
+        if context.scene.bakeColor and not context.scene.UseLowOnly:
 
             bpy.context.scene.cycles.samples = 1
             bpy.context.scene.render.bake.use_pass_direct = False
@@ -381,6 +425,7 @@ def register():
     bpy.utils.register_class(BRM_BakeUIHide)
     bpy.utils.register_class(BRM_BakeUIPanel)
     bpy.utils.register_class(BRM_BakeUIToggle)
+    bpy.utils.register_class(BRM_BakeUIIncrement)
 
     bpy.types.Scene.lowpoly = bpy.props.StringProperty (
         name = "lowpoly",
@@ -478,12 +523,18 @@ def register():
         default = True,
         description = "Use Blender Game for lowpoly display",
         )
+    bpy.types.Scene.UseLowOnly = bpy.props.BoolProperty (
+        name = "UseLowOnly",
+        default = False,
+        description = "Only bake lowpoly on itself",
+        )
 
 def unregister():
     bpy.utils.unregister_class(BRM_Bake)
     bpy.utils.unregister_class(BRM_BakeUIHide)
     bpy.utils.unregister_class(BRM_BakeUIPanel)
     bpy.utils.unregister_class(BRM_BakeUIToggle)
+    bpy.utils.unregister_class(BRM_BakeUIIncrement)
 
     del bpy.types.Scene.lowpoly
     del bpy.types.Scene.lowpolyActive
@@ -502,6 +553,7 @@ def unregister():
     del bpy.types.Scene.bakeHeight
     del bpy.types.Scene.bakeFolder
     del bpy.types.Scene.UseBlenderGame
+    del bpy.types.Scene.UseLowOnly
     
 if __name__ == "__main__":
     register()
