@@ -1,7 +1,7 @@
 # BRM-BakeUI
 Texture baking UI for Blender
 
-![UI screenshot](http://www.brameulaers.net/blender/addons/github_images/brm_bakeUI.gif)
+![UI screenshot](http://www.brameulaers.net/blender/addons/github_images/brm_bakeUI2.gif)
 
 Very WIP, will add detailed instructions in the near future.
 For now:
