@@ -51,6 +51,7 @@ class BRM_BakeUIPanel(bpy.types.Panel):
         if context.scene.hipolyGroup is False:
             row.prop_search(context.scene, "hipoly", context.scene, "objects", text="", icon="MESH_UVSPHERE")
 
+        row.enabled = not context.scene.UseLowOnly
         row.prop(context.scene, "hipolyGroup", text="", icon="GROUP")
         #op = row.operator("brm.bakeuihide", text="", icon=hideicon)
 
@@ -62,19 +63,36 @@ class BRM_BakeUIPanel(bpy.types.Panel):
         op = row.operator("brm.bakeuihide", text="", icon=hideicon)
         op.targetmesh = "hipoly"
 
+        
+
         col = box.column(align=True)
         row = col.row(align = True)
         row.operator("brm.bakeuitoggle", text="Toggle hi/low", icon="LAMP")
         row.prop(context.scene, "UseBlenderGame", icon="LOGIC", text="")
+
+        
+        #row.prop(context.scene, "hipoly", text="", icon="MESH_UVSPHERE")
+        #row.prop(context.scene, "hipolygroup", text="", icon="MESH_UVSPHERE")
+        
+        
+        
         
         
 
         col = layout.column(align=True)
 
         col.separator()
-
-        col.prop(context.scene.render.bake, "cage_extrusion", text="Ray Distance")
-        col.prop(context.scene.render.bake, "margin")
+        row = col.row(align = True)
+        row.prop(context.scene.render.bake, "cage_extrusion", text="Ray Distance")
+        row.prop(context.scene, "cageEnabled", icon="BBOX", text="")
+        row = col.row(align = True)
+        #row.enabled = context.scene.cageEnabled
+        
+        if context.scene.cageEnabled:
+            op = row.prop_search(context.scene, "cage", bpy.data, "objects", text="", icon="MESH_CUBE")
+        #op.enabled = context.scene.cageEnabled
+        
+        col.separator()
 
         box = layout.box()
         col = box.column(align=True)
@@ -90,9 +108,14 @@ class BRM_BakeUIPanel(bpy.types.Panel):
         row.operator("brm.bakeuiincrement", text="", icon="ZOOMOUT").target = "height/2"
         row.prop(context.scene, "bakeHeight", text="")
         row.operator("brm.bakeuiincrement", text="", icon="ZOOMIN").target = "height*2"
+        row = col.row(align = True)
+        row.label(text="Padding:")
+        row.prop(context.scene.render.bake, "margin", text="")
+        
+        
 
         col = layout.column(align=True)
-        
+        col.separator()
         col.prop(context.scene, 'bakeFolder', text="")
         row = col.row(align = True)
         row.label(text="Filename:")
@@ -125,7 +148,11 @@ class BRM_BakeUIPanel(bpy.types.Panel):
 
         row = col.row(align = True)
         row.prop(context.scene, "bakeUV", icon="TEXTURE_SHADED", text="UV Snapshot")
+        
+        
+        
         col = layout.column(align=True)
+        col.separator()
         row = col.row(align = True)
         op = row.operator("brm.bake", text="BAKE", icon="RENDER_STILL")
         row.prop(context.scene, "UseLowOnly", icon="MESH_ICOSPHERE", text="")
@@ -325,10 +352,18 @@ class BRM_Bake(bpy.types.Operator):
 
         node.image = bakeimage
 
+        if context.scene.cageEnabled:
+            bpy.context.scene.render.bake.use_cage = True
+            bpy.context.scene.render.bake.cage_object = context.scene.cage
+
+        else:
+            bpy.context.scene.render.bake.use_cage = False
 
         if context.scene.bakeNormal and not context.scene.UseLowOnly:
 
             bpy.context.scene.cycles.samples = context.scene.samplesNormal
+
+            
 
             bpy.ops.object.bake(type='NORMAL', use_clear=True, use_selected_to_active=True, normal_space='TANGENT')
 
@@ -452,6 +487,21 @@ def register():
         default = False,
         description = "enable group selection",
         )
+    bpy.types.Scene.cage = bpy.props.StringProperty (
+        name = "cage",
+        default = "cage",
+        description = "cage object",
+        )
+    bpy.types.Scene.cageActive = bpy.props.BoolProperty (
+        name = "cageActive",
+        default = True,
+        description = "cageActive",
+        )
+    bpy.types.Scene.cageEnabled = bpy.props.BoolProperty (
+        name = "cageEnabled",
+        default = False,
+        description = "Enable cage object for baking",
+        )
     bpy.types.Scene.bakeNormal = bpy.props.BoolProperty (
         name = "bakeNormal",
         default = False,
@@ -540,6 +590,9 @@ def unregister():
     del bpy.types.Scene.lowpolyActive
     del bpy.types.Scene.hipoly
     del bpy.types.Scene.hipolyActive
+    del bpy.types.Scene.cage
+    del bpy.types.Scene.cageActive
+    del bpy.types.Scene.cageEnabled
     del bpy.types.Scene.bakeNormal
     del bpy.types.Scene.bakeObject
     del bpy.types.Scene.bakeAO
