@@ -33,8 +33,13 @@ class BRM_BakeUIPanel(bpy.types.Panel):
         col = box.column(align=True)
 
         row = col.row(align = True)
-        #row.prop(context.scene, "lowpoly", text="", icon="MESH_ICOSPHERE")
-        row.prop_search(context.scene, "lowpoly", context.scene, "objects", text="", icon="MESH_ICOSPHERE")
+        if context.scene.lowpolyGroup is True:
+            row.prop_search(context.scene, "lowpoly", bpy.data, "groups", text="", icon="MESH_ICOSPHERE")
+        if context.scene.lowpolyGroup is False:
+            row.prop_search(context.scene, "lowpoly", context.scene, "objects", text="", icon="MESH_ICOSPHERE")
+        
+        row.prop(context.scene, "lowpolyGroup", text="", icon="GROUP")
+
         if context.scene.lowpolyActive is True:
             hideicon = "RESTRICT_VIEW_OFF"
         if context.scene.lowpolyActive is False:
@@ -43,8 +48,7 @@ class BRM_BakeUIPanel(bpy.types.Panel):
         op.targetmesh = "lowpoly"
         
         row = col.row(align = True)
-        #row.prop(context.scene, "hipoly", text="", icon="MESH_UVSPHERE")
-        #row.prop(context.scene, "hipolygroup", text="", icon="MESH_UVSPHERE")
+
         
         if context.scene.hipolyGroup is True:
             row.prop_search(context.scene, "hipoly", bpy.data, "groups", text="", icon="MESH_UVSPHERE")
@@ -53,9 +57,7 @@ class BRM_BakeUIPanel(bpy.types.Panel):
 
         row.enabled = not context.scene.UseLowOnly
         row.prop(context.scene, "hipolyGroup", text="", icon="GROUP")
-        #op = row.operator("brm.bakeuihide", text="", icon=hideicon)
 
-        #, icon="MESH_UVSPHERE"
         if context.scene.hipolyActive is True:
             hideicon = "RESTRICT_VIEW_OFF"
         if context.scene.hipolyActive is False:
@@ -71,12 +73,7 @@ class BRM_BakeUIPanel(bpy.types.Panel):
         row.prop(context.scene, "UseBlenderGame", icon="LOGIC", text="")
 
         
-        #row.prop(context.scene, "hipoly", text="", icon="MESH_UVSPHERE")
-        #row.prop(context.scene, "hipolygroup", text="", icon="MESH_UVSPHERE")
-        
-        
-        
-        
+
         
 
         col = layout.column(align=True)
@@ -165,13 +162,12 @@ class BRM_BakeUIToggle(bpy.types.Operator):
     bl_options = {"UNDO"}
 
     def execute(self, context):
-
         if bpy.context.object.mode == 'EDIT':
             bpy.ops.object.mode_set(mode='OBJECT')
 
         #test lowpoly/hipoly exists
-        if bpy.data.objects.get(context.scene.lowpoly) is None:
-            self.report({'WARNING'}, "Select a valid lowpoly object!")
+        if bpy.data.objects.get(context.scene.lowpoly) is None and not context.scene.lowpoly in bpy.data.groups:
+            self.report({'WARNING'}, "Select a valid lowpoly object or group!")
             return {'FINISHED'}
         if bpy.data.objects.get(context.scene.hipoly) is None and not context.scene.hipoly in bpy.data.groups:
             self.report({'WARNING'}, "Select a valid hipoly object or group!")
@@ -179,8 +175,13 @@ class BRM_BakeUIToggle(bpy.types.Operator):
 
         if context.scene.lowpolyActive is True:
             bpy.data.scenes["Scene"].render.engine = "CYCLES"
+
             context.scene.lowpolyActive = False
-            bpy.data.objects[context.scene.lowpoly].hide = True
+            if bpy.data.objects.get(context.scene.lowpoly) is None:
+                for o in bpy.data.groups[context.scene.lowpoly].objects:
+                    o.hide = True
+            else:
+                bpy.data.objects[context.scene.lowpoly].hide = True
 
             context.scene.hipolyActive = True
             if bpy.data.objects.get(context.scene.hipoly) is None:
@@ -193,7 +194,11 @@ class BRM_BakeUIToggle(bpy.types.Operator):
             if context.scene.UseBlenderGame:
                 bpy.data.scenes["Scene"].render.engine = "BLENDER_GAME"
             context.scene.lowpolyActive = True
-            bpy.data.objects[context.scene.lowpoly].hide = False
+            if bpy.data.objects.get(context.scene.lowpoly) is None:
+                for o in bpy.data.groups[context.scene.lowpoly].objects:
+                    o.hide = False
+            else:
+                bpy.data.objects[context.scene.lowpoly].hide = False
 
             context.scene.hipolyActive = False
             if bpy.data.objects.get(context.scene.hipoly) is None:
@@ -240,17 +245,27 @@ class BRM_BakeUIHide(bpy.types.Operator):
 
         if self.targetmesh == "lowpoly":
 
-            if bpy.data.objects.get(context.scene.lowpoly) is None:
-                self.report({'WARNING'}, "Select a valid lowpoly object!")
+            if bpy.data.objects.get(context.scene.lowpoly) is None and not context.scene.lowpoly in bpy.data.groups:
+                self.report({'WARNING'}, "Select a valid lowpoly object or group!")
                 return {'FINISHED'}
+
             else:
 
                 if context.scene.lowpolyActive is True:
                     context.scene.lowpolyActive = False
-                    bpy.data.objects[context.scene.lowpoly].hide = True
+                    if bpy.data.objects.get(context.scene.lowpoly) is None:
+                        for o in bpy.data.groups[context.scene.lowpoly].objects:
+                            o.hide = True
+                    else:
+                        bpy.data.objects[context.scene.lowpoly].hide = True
+
                 else:
                     context.scene.lowpolyActive = True
-                    bpy.data.objects[context.scene.lowpoly].hide = False
+                    if bpy.data.objects.get(context.scene.lowpoly) is None:
+                        for o in bpy.data.groups[context.scene.lowpoly].objects:
+                            o.hide = False
+                    else:
+                        bpy.data.objects[context.scene.lowpoly].hide = False
 
         if self.targetmesh == "hipoly":
 
@@ -295,30 +310,70 @@ class BRM_Bake(bpy.types.Operator):
             self.report({'WARNING'}, "Select a valid export folder!")
             return {'FINISHED'}
         #test lowpoly/hipoly exists
-        if bpy.data.objects.get(context.scene.lowpoly) is None:
-            self.report({'WARNING'}, "Select a valid lowpoly object!")
+        if bpy.data.objects.get(context.scene.lowpoly) is None and not context.scene.lowpoly in bpy.data.groups:
+            self.report({'WARNING'}, "Select a valid lowpoly object or group!")
             return {'FINISHED'}
         if bpy.data.objects.get(context.scene.hipoly) is None and not context.scene.hipoly in bpy.data.groups:
             self.report({'WARNING'}, "Select a valid hipoly object or group!")
             return {'FINISHED'}
-        #test if lowpoly has a material
-        if len(bpy.data.objects[context.scene.lowpoly].data.materials) == 0:
-            self.report({'WARNING'}, "Material required on low poly mesh!")
-            return {'FINISHED'}
-        if len(bpy.data.objects[context.scene.lowpoly].data.uv_layers) == 0:
-            self.report({'WARNING'}, "low poly mesh has no UV!")
-            return {'FINISHED'}
-
+       
+        
+       
         #setup
+        if len(bpy.context.selected_objects) == 0:
+            bpy.ops.object.mode_set(mode='OBJECT')
+            
         if bpy.context.object.mode == 'EDIT':
             bpy.ops.object.mode_set(mode='OBJECT')
 
         bpy.ops.object.select_all(action='DESELECT')
 
+
         #select lowpoly
-        bpy.data.objects[context.scene.lowpoly].hide = False
-        bpy.data.objects[context.scene.lowpoly].select = True
-        orig_lowpoly = bpy.data.objects[context.scene.lowpoly]
+        lowpolyobject = "null"
+        orig_lowpoly = None
+
+        #if group, create temporary lowpoly object
+        if bpy.data.objects.get(context.scene.lowpoly) is None:
+                
+                #select all objects
+                for o in bpy.data.groups[context.scene.lowpoly].objects:
+                    o.hide = False
+                    o.select = True
+                    o.hide_render = True
+                #duplicate selected and combine into new object
+                bpy.ops.object.duplicate()
+                bpy.ops.object.join()
+                bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+
+                lowpolyobject = bpy.context.selected_objects[0].name
+                bpy.data.objects[lowpolyobject].hide_render = False
+
+
+        else:
+            bpy.data.objects[context.scene.lowpoly].hide = False
+            bpy.data.objects[context.scene.lowpoly].select = True
+            orig_lowpoly = bpy.data.objects[context.scene.lowpoly]
+            lowpolyobject = context.scene.lowpoly
+
+        #test if lowpoly has a material
+        if len(bpy.data.objects[lowpolyobject].data.materials) == 0:
+            if context.scene.lowpolyGroup:
+                bpy.ops.object.select_all(action='DESELECT')
+                bpy.data.objects[lowpolyobject].select = True
+                bpy.ops.object.delete(use_global=False)
+            self.report({'WARNING'}, "Material required on low poly mesh!")
+            return {'FINISHED'}
+
+        if len(bpy.data.objects[lowpolyobject].data.uv_layers) == 0:
+            if context.scene.lowpolyGroup:
+                bpy.ops.object.select_all(action='DESELECT')
+                bpy.data.objects[lowpolyobject].select = True
+                bpy.ops.object.delete(use_global=False)
+            self.report({'WARNING'}, "low poly mesh has no UV!")
+            return {'FINISHED'}
+
+
 
         orig_renderer = bpy.data.scenes["Scene"].render.engine
         bpy.data.scenes["Scene"].render.engine = "CYCLES"
@@ -340,7 +395,7 @@ class BRM_Bake(bpy.types.Operator):
                 bpy.data.objects[context.scene.hipoly].hide = False
                 bpy.data.objects[context.scene.hipoly].select = True
 
-        bpy.context.scene.objects.active = bpy.data.objects[context.scene.lowpoly]
+        bpy.context.scene.objects.active = bpy.data.objects[lowpolyobject]
 
         orig_mat = bpy.context.active_object.data.materials[0]
         bpy.context.active_object.data.materials[0] = bakemat
@@ -415,7 +470,8 @@ class BRM_Bake(bpy.types.Operator):
         bpy.context.active_object.data.materials[0] = orig_mat
 
         bpy.ops.object.select_all(action='DESELECT')
-        orig_lowpoly.select = True
+        if not context.scene.lowpolyGroup:
+            orig_lowpoly.select = True
 
 
         for image in bpy.data.images:
@@ -433,11 +489,26 @@ class BRM_Bake(bpy.types.Operator):
             bpy.ops.uv.export_layout(filepath=uvfilepath, size=(context.scene.bakeWidth, context.scene.bakeHeight))
             bpy.context.area.type = original_type
 
+        #remove temp lowpoly
+        if context.scene.lowpolyGroup:
+            bpy.ops.object.select_all(action='DESELECT')
+            bpy.data.objects[lowpolyobject].select = True
+            bpy.ops.object.delete(use_global=False)
+
+
         #rehide back to original state
         if context.scene.lowpolyActive is True:
-            bpy.data.objects[context.scene.lowpoly].hide = False
+            if bpy.data.objects.get(context.scene.lowpoly) is None:
+                for o in bpy.data.groups[context.scene.lowpoly].objects:
+                    o.hide = False
+            else:
+                bpy.data.objects[context.scene.lowpoly].hide = False
         else:
-            bpy.data.objects[context.scene.lowpoly].hide = True
+            if bpy.data.objects.get(context.scene.lowpoly) is None:
+                for o in bpy.data.groups[context.scene.lowpoly].objects:
+                    o.hide = True
+            else:
+                bpy.data.objects[context.scene.lowpoly].hide = True
 
         if context.scene.hipolyActive is True:
             if bpy.data.objects.get(context.scene.hipoly) is None:
@@ -471,6 +542,11 @@ def register():
         name = "lowpolyActive",
         default = True,
         description = "lowpolyActive",
+        )
+    bpy.types.Scene.lowpolyGroup = bpy.props.BoolProperty (
+        name = "lowpolyGroup",
+        default = False,
+        description = "enable group selection",
         )
     bpy.types.Scene.hipoly = bpy.props.StringProperty (
         name = "hipoly",
