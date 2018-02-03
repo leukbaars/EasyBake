@@ -317,12 +317,8 @@ class BRM_Bake(bpy.types.Operator):
             self.report({'WARNING'}, "Select a valid hipoly object or group!")
             return {'FINISHED'}
        
-        
-       
         #setup
-        if len(bpy.context.selected_objects) == 0:
-            bpy.ops.object.mode_set(mode='OBJECT')
-            
+           
         if bpy.context.object.mode == 'EDIT':
             bpy.ops.object.mode_set(mode='OBJECT')
 
@@ -340,6 +336,7 @@ class BRM_Bake(bpy.types.Operator):
                 for o in bpy.data.groups[context.scene.lowpoly].objects:
                     o.hide = False
                     o.select = True
+                    bpy.context.scene.objects.active = o
                     o.hide_render = True
                 #duplicate selected and combine into new object
                 bpy.ops.object.duplicate()
@@ -501,6 +498,7 @@ class BRM_Bake(bpy.types.Operator):
             if bpy.data.objects.get(context.scene.lowpoly) is None:
                 for o in bpy.data.groups[context.scene.lowpoly].objects:
                     o.hide = False
+                    bpy.context.scene.objects.active = o
             else:
                 bpy.data.objects[context.scene.lowpoly].hide = False
         else:
@@ -514,6 +512,7 @@ class BRM_Bake(bpy.types.Operator):
             if bpy.data.objects.get(context.scene.hipoly) is None:
                 for o in bpy.data.groups[context.scene.hipoly].objects:
                     o.hide = False
+                    bpy.context.scene.objects.active = o
             else:
                 bpy.data.objects[context.scene.hipoly].hide = False
         else:
