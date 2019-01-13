@@ -1,22 +1,30 @@
 # BRM-BakeUI
-Texture baking UI for Blender
+Texture baking UI for Blender that lives in the 3D Viewport.
+Small but powerful! Fast one-click baking and iteration.
+
+example: procedural color map and occlusion baked from high poly model
+![screenshot](http://www.brameulaers.net/blender/addons/github_images/BRM_bake_example.png)
+
+**instructions:**
+
+1. put BRM_Bake.py in your addon folder
+2. install add-on in user preferences (look for BRM_Bake)
+3. you can find the UI under the "bake" tab in the tools UI (top right in the 3D viewport)
+
+UI functions:
 
 ![UI screenshot](http://www.brameulaers.net/blender/addons/github_images/BRM_bake_instructions.png)
 
-Very WIP, will add detailed instructions in the near future.
-For now:
+**currently supports:**
 
+- tangent normals
+- object normals
+- color
+- roughness
+- occlusion
+- uv wireframe
 
--install add-on
+**future plans:**
 
--you can find the UI under the "bake" tab in the tools panel
-
--in lowpoly enter your lowpoly object's name
-
--in hipoly enter the name of you hipoly object or group
-
--it uses cycles for baking, so make sure your hipoly meshes have cycles materials assigned to them
-
--select the maps you want to bake out, and bake them to your desired folder!
-
--baked textures will automatically update in Blender, so assign them to your lowpoly mesh's material for a quick iterative workflow.
+- metalness map (once this is bakeable in 2.8)
+- position map 
