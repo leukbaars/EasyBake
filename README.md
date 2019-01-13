@@ -2,8 +2,8 @@
 Texture baking UI for Blender that lives in the 3D Viewport.
 Small but powerful! Fast one-click baking and iteration.
 
-example: procedural color map and occlusion baked from high poly model
-![screenshot](http://www.brameulaers.net/blender/addons/github_images/BRM_bake_example.png)
+example screenshot, baking down Occlusion, Color and Roughness from node setup:
+![screenshot](http://www.brameulaers.net/blender/addons/github_images/BRM_bake_example2.png)
 
 **instructions:**
 
