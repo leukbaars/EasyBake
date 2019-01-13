@@ -14,6 +14,12 @@ import os
 import bmesh
 from bpy.props import EnumProperty, BoolProperty, StringProperty, FloatProperty, IntProperty
 
+
+
+
+
+
+
 class BRM_BakeUIPanel(bpy.types.Panel):
     """BRM_BakeUIPanel Panel"""
     bl_label = "BRM Bake"
@@ -144,10 +150,14 @@ class BRM_BakeUIPanel(bpy.types.Panel):
         row = col.row(align = True)
         row.enabled = not context.scene.UseLowOnly
         row.prop(context.scene, "bakeColor", icon="SHADING_TEXTURE", text="Color")
+        if context.scene.bakeColor:
+            row.prop(context.scene, "samplesColor", text="")
 
         row = col.row(align = True)
         row.enabled = not context.scene.UseLowOnly
         row.prop(context.scene, "bakeRoughness", icon="SHADING_TEXTURE", text="Roughness")
+        if context.scene.bakeRoughness:
+            row.prop(context.scene, "samplesRoughness", text="")
 
         row = col.row(align = True)
         row.prop(context.scene, "bakeUV", icon="SHADING_WIRE", text="UV Snapshot")
@@ -160,6 +170,16 @@ class BRM_BakeUIPanel(bpy.types.Panel):
         op = row.operator("brm.bake", text="BAKE", icon="RENDER_RESULT")
         row.prop(context.scene, "UseLowOnly", icon="MESH_ICOSPHERE", text="")
         
+
+
+
+
+
+
+
+
+
+
 
 class BRM_BakeUIToggle(bpy.types.Operator):
     """toggle lowpoly/hipoly"""
@@ -217,6 +237,12 @@ class BRM_BakeUIToggle(bpy.types.Operator):
 
         return {'FINISHED'}
 
+
+
+
+
+
+
 class BRM_BakeUIIncrement(bpy.types.Operator):
     """multiply/divide value"""
     bl_idname = "brm.bakeuiincrement"
@@ -234,6 +260,17 @@ class BRM_BakeUIIncrement(bpy.types.Operator):
         if self.target == "height*2":
             context.scene.bakeHeight = context.scene.bakeHeight * 2
         return {'FINISHED'}
+
+
+
+
+
+
+
+
+
+
+
 
 class BRM_BakeUIHide(bpy.types.Operator):
     """hide object"""
@@ -300,6 +337,17 @@ class BRM_BakeUIHide(bpy.types.Operator):
                         bpy.data.objects[context.scene.hipoly].hide_viewport = False
 
         return {'FINISHED'}
+
+
+
+
+
+
+
+
+
+
+
 
 
 class BRM_Bake(bpy.types.Operator):
@@ -427,6 +475,7 @@ class BRM_Bake(bpy.types.Operator):
             bpy.context.scene.render.bake.use_cage = False
 
 
+        #bake maps!
 
         if context.scene.bakeNormal and not context.scene.UseLowOnly:
 
@@ -459,7 +508,7 @@ class BRM_Bake(bpy.types.Operator):
 
         if context.scene.bakeColor and not context.scene.UseLowOnly:
 
-            bpy.context.scene.cycles.samples = 1
+            bpy.context.scene.cycles.samples = context.scene.samplesColor
             bpy.context.scene.render.bake.use_pass_direct = False
             bpy.context.scene.render.bake.use_pass_indirect = False
             bpy.context.scene.render.bake.use_pass_color = True
@@ -472,7 +521,7 @@ class BRM_Bake(bpy.types.Operator):
         
         if context.scene.bakeRoughness and not context.scene.UseLowOnly:
 
-            bpy.context.scene.cycles.samples = 1
+            bpy.context.scene.cycles.samples = context.scene.samplesRoughness
 
             bpy.ops.object.bake(type='ROUGHNESS', use_clear=True, use_selected_to_active=True)
 
@@ -481,13 +530,12 @@ class BRM_Bake(bpy.types.Operator):
             bakeimage.save()
 
 
-        #return
+        #cleanup
         bpy.data.images.remove(bakeimage)
         bakemat.node_tree.nodes.remove(node)
         bpy.data.materials.remove(bakemat)
 
         #reset
-        #bpy.data.scenes["Scene"].render.engine = orig_renderer
         bpy.context.active_object.data.materials[0] = orig_mat
 
         bpy.ops.object.select_all(action='DESELECT')
@@ -549,6 +597,18 @@ class BRM_Bake(bpy.types.Operator):
                 bpy.data.objects[context.scene.hipoly].hide_viewport = True
 
         return {'FINISHED'}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def register():
@@ -653,6 +713,11 @@ def register():
         default = 1,
         description = "samplesColor",
         )
+    bpy.types.Scene.samplesRoughness = bpy.props.IntProperty (
+        name = "samplesRoughness",
+        default = 1,
+        description = "samplesRoughness",
+        )
     bpy.types.Scene.bakeWidth = bpy.props.IntProperty (
         name = "bakeWidth",
         default = 512,
@@ -708,6 +773,7 @@ def unregister():
     del bpy.types.Scene.samplesNormal
     del bpy.types.Scene.samplesAO
     del bpy.types.Scene.samplesColor
+    del bpy.types.Scene.samplesRoughness
     del bpy.types.Scene.samplesObject
     del bpy.types.Scene.bakeWidth
     del bpy.types.Scene.bakeHeight
