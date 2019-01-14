@@ -428,8 +428,11 @@ class BRM_Bake(bpy.types.Operator):
 
 
 
-        #orig_renderer = bpy.data.scenes["Scene"].render.engine
-        bpy.data.scenes["Scene"].render.engine = "CYCLES"
+        orig_renderer = bpy.data.scenes[bpy.context.scene.name].render.engine
+        bpy.data.scenes[bpy.context.scene.name].render.engine = "CYCLES"
+
+        
+        
 
         #create bake image and material
         bakeimage = bpy.data.images.new("BakeImage", width=context.scene.bakeWidth, height=context.scene.bakeHeight)
@@ -537,6 +540,7 @@ class BRM_Bake(bpy.types.Operator):
 
         #reset
         bpy.context.active_object.data.materials[0] = orig_mat
+        bpy.data.scenes[bpy.context.scene.name].render.engine = orig_renderer
 
         bpy.ops.object.select_all(action='DESELECT')
         if not context.scene.lowpolyGroup:
