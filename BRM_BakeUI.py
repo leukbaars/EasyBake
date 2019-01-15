@@ -200,6 +200,8 @@ class BRM_BakeUIToggle(bpy.types.Operator):
             self.report({'WARNING'}, "Select a valid hipoly object or group!")
             return {'FINISHED'}
 
+        
+
         if context.scene.lowpolyActive is True:
             bpy.data.scenes["Scene"].render.engine = "CYCLES"
 
@@ -374,20 +376,32 @@ class BRM_Bake(bpy.types.Operator):
             return {'FINISHED'}
        
         #setup
-           
+
+        #1 unhide everything to be baked
+        if bpy.data.objects.get(context.scene.hipoly) is None:
+            for o in bpy.data.collections[context.scene.hipoly].objects:
+                o.hide_viewport = False
+        else:
+            bpy.data.objects[context.scene.hipoly].hide_viewport = False
+        if bpy.data.objects.get(context.scene.lowpoly) is None:
+            for o in bpy.data.collections[context.scene.lowpoly].objects:
+                o.hide_viewport = False
+        else:
+            bpy.data.objects[context.scene.lowpoly].hide_viewport = False
+        
+        #2 make sure we are in object mode and nothing is selected
         if bpy.context.object.mode == 'EDIT':
             bpy.ops.object.mode_set(mode='OBJECT')
 
         bpy.ops.object.select_all(action='DESELECT')
 
 
-        #select lowpoly
+        #3 select lowpoly
         lowpolyobject = "null"
         orig_lowpoly = None
 
         #if collection, create temporary lowpoly object
-        if bpy.data.objects.get(context.scene.lowpoly) is None:
-                
+        if bpy.types.Scene.lowpolyGroup:   
                 #select all objects
                 for o in bpy.data.collections[context.scene.lowpoly].objects:
                     o.hide_viewport = False
@@ -409,7 +423,7 @@ class BRM_Bake(bpy.types.Operator):
             orig_lowpoly = bpy.data.objects[context.scene.lowpoly]
             lowpolyobject = context.scene.lowpoly
 
-        #test if lowpoly has a material
+        #4 test if lowpoly has a material
         if len(bpy.data.objects[lowpolyobject].data.materials) == 0:
             if context.scene.lowpolyGroup:
                 bpy.ops.object.select_all(action='DESELECT')
@@ -431,9 +445,6 @@ class BRM_Bake(bpy.types.Operator):
         orig_renderer = bpy.data.scenes[bpy.context.scene.name].render.engine
         bpy.data.scenes[bpy.context.scene.name].render.engine = "CYCLES"
 
-        
-        
-
         #create bake image and material
         bakeimage = bpy.data.images.new("BakeImage", width=context.scene.bakeWidth, height=context.scene.bakeHeight)
         bakemat = bpy.data.materials.new(name="bakemat")
@@ -441,7 +452,7 @@ class BRM_Bake(bpy.types.Operator):
 
         if not context.scene.UseLowOnly:
         #select hipoly object or collection:
-            if bpy.data.objects.get(context.scene.hipoly) is None:
+            if bpy.types.Scene.hipolyGroup:
                 for o in bpy.data.collections[context.scene.hipoly].objects:
                     o.hide_viewport = False
                     o.select_set(state=True)
@@ -450,14 +461,13 @@ class BRM_Bake(bpy.types.Operator):
                 bpy.data.objects[context.scene.hipoly].select_set(state=True)
         else:
         #deselect hipoly object or collection:
-            if bpy.data.objects.get(context.scene.hipoly) is None:
+            if bpy.types.Scene.hipolyGroup:
                 for o in bpy.data.collections[context.scene.hipoly].objects:
                     o.select_set(state=False)
             else:
                 bpy.data.objects[context.scene.hipoly].select_set(state=False)
 
         bpy.context.view_layer.objects.active = bpy.data.objects[lowpolyobject]
-        
 
         orig_mat = bpy.context.active_object.data.materials[0]
         bpy.context.active_object.data.materials[0] = bakemat
@@ -549,8 +559,7 @@ class BRM_Bake(bpy.types.Operator):
 
         for image in bpy.data.images:
             image.reload()
-        
-        
+                
         #UV SNAPSHOT
         if context.scene.bakeUV:
             bpy.ops.object.editmode_toggle()
@@ -567,7 +576,6 @@ class BRM_Bake(bpy.types.Operator):
             bpy.ops.object.select_all(action='DESELECT')
             bpy.data.objects[lowpolyobject].select_set(state=True)
             bpy.ops.object.delete(use_global=False)
-
 
         #rehide back to original state 
         if context.scene.lowpolyActive is True:
