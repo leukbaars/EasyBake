@@ -329,6 +329,7 @@ class BRM_Bake(bpy.types.Operator):
             self.report({'WARNING'}, "Select a valid export folder!")
             return {'FINISHED'}
 
+
         #test lowpoly/hipoly/cage exists
         if bpy.data.objects.get(context.scene.lowpoly) is None and not context.scene.lowpoly in bpy.data.collections:
             self.report({'WARNING'}, "Select a valid lowpoly object or collection!")
@@ -337,12 +338,40 @@ class BRM_Bake(bpy.types.Operator):
             self.report({'WARNING'}, "Select a valid hipoly object or collection!")
             return {'FINISHED'}
         if bpy.data.objects.get(context.scene.cage) is None and context.scene.cageEnabled:
-                self.report({'WARNING'}, "Select a valid cage object!")
-                return {'FINISHED'}
-        #test if lowpoly and highpoly objects are actually models
+            self.report({'WARNING'}, "Select a valid cage object!")
+            return {'FINISHED'}
 
-        #if bpy.data.objects[context.scene.lowpoly].type is 'MESH':
-        #   print("is a mesh!")
+
+        #test if lowpoly, highpoly and cage objects are actually models
+        lowpolymeshes = 0
+        if bpy.data.objects.get(context.scene.lowpoly) is None:
+            for o in bpy.data.collections[context.scene.lowpoly].objects:
+                if o.type == 'MESH':
+                    lowpolymeshes+=1
+        else:
+            if bpy.data.objects[context.scene.lowpoly].type == 'MESH':
+                lowpolymeshes = 1
+        if lowpolymeshes == 0:
+            self.report({'WARNING'}, "lowpoly needs to have a mesh!")
+            return {'FINISHED'}   
+        
+        hipolymeshes = 0
+        if bpy.data.objects.get(context.scene.hipoly) is None:
+            for o in bpy.data.collections[context.scene.hipoly].objects:
+                if o.type == 'MESH':
+                    hipolymeshes+=1
+        else:
+            if bpy.data.objects[context.scene.hipoly].type == 'MESH':
+                hipolymeshes = 1
+        if hipolymeshes == 0:
+            self.report({'WARNING'}, "hipoly needs to have a mesh!")
+            return {'FINISHED'}
+        
+        if context.scene.cageEnabled and bpy.data.objects[context.scene.cage].type != 'MESH':
+            self.report({'WARNING'}, "cage needs to be a mesh!")
+            return {'FINISHED'}
+
+        
         #setup
 
     #1 unhide everything to be baked
@@ -363,10 +392,11 @@ class BRM_Bake(bpy.types.Operator):
         #if collection, create temporary lowpoly object
         if bpy.data.objects.get(context.scene.lowpoly) is None:   
             for o in bpy.data.collections[context.scene.lowpoly].objects:
-                o.hide_viewport = False
-                o.select_set(state=True)
-                context.view_layer.objects.active = o
-                o.hide_render = True
+                if o.type == 'MESH':
+                    o.hide_viewport = False
+                    o.select_set(state=True)
+                    context.view_layer.objects.active = o
+                    o.hide_render = True
             #duplicate selected and combine into new object
             bpy.ops.object.duplicate()
             bpy.ops.object.join()
@@ -411,9 +441,10 @@ class BRM_Bake(bpy.types.Operator):
         #select hipoly object or collection:
             if bpy.data.objects.get(context.scene.hipoly) is None:
                 for o in bpy.data.collections[context.scene.hipoly].objects:
-                    o.hide_viewport = False
-                    o.hide_render = False
-                    o.select_set(state=True)
+                    if o.type == 'MESH':
+                        o.hide_viewport = False
+                        o.hide_render = False
+                        o.select_set(state=True)
             else:
                 bpy.data.objects[context.scene.hipoly].hide_viewport = False
                 bpy.data.objects[context.scene.hipoly].hide_render = False
@@ -434,9 +465,16 @@ class BRM_Bake(bpy.types.Operator):
     #10 check if theres a cage to be used
         if context.scene.cageEnabled:
             bpy.context.scene.render.bake.use_cage = True
-            bpy.context.scene.render.bake.cage_object = context.scene.cage
+            bpy.context.scene.render.bake.cage_object = bpy.data.objects[context.scene.cage]
         else:
             bpy.context.scene.render.bake.use_cage = False
+
+
+
+
+
+
+
 
     #11 bake all maps!
         if context.scene.bakeNormal and not context.scene.UseLowOnly:
@@ -501,7 +539,12 @@ class BRM_Bake(bpy.types.Operator):
             uvfilepath = context.scene.bakeFolder+context.scene.bakePrefix+"_uv.png"
             bpy.ops.uv.export_layout(filepath=uvfilepath, size=(context.scene.bakeWidth, context.scene.bakeHeight))
             bpy.context.area.type = original_type
-       
+
+
+
+
+
+
         #cleanup temporary objects and materials
         bpy.ops.object.select_all(action='DESELECT')
         if not context.scene.lowpolyGroup:
