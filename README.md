@@ -1,4 +1,4 @@
-# BRM-BakeUI
+# EasyBake
 Texture baking UI for Blender that lives in the 3D Viewport.
 Small but powerful! Fast one-click baking and iteration.
 
@@ -7,8 +7,8 @@ example screenshot, baking down Occlusion, Color and Roughness from node setup:
 
 **instructions:**
 
-1. put BRM_Bake.py in your addon folder
-2. install add-on in user preferences (look for BRM_Bake)
+1. put EasyBake.py in your addon folder
+2. install add-on in user preferences (look for EasyBake)
 3. you can find the UI under the "bake" tab in the tools UI (top right in the 3D viewport)
 
 UI functions:
