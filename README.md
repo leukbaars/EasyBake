@@ -2,8 +2,8 @@
 Texture baking UI for Blender that lives in the 3D Viewport.
 Small but powerful! Fast one-click baking and iteration.
 
-example screenshot, baking down Occlusion, Color and Roughness from node setup:
-![screenshot](http://www.brameulaers.net/blender/addons/github_images/BRM_bake_example2.png)
+Gas canister asset example, all maps baked using EasyBake:
+![screenshot](http://www.brameulaers.net/blender/addons/github_images/easybake_example.jpg)
 
 **instructions:**
 
@@ -13,7 +13,7 @@ example screenshot, baking down Occlusion, Color and Roughness from node setup:
 
 UI functions:
 
-![UI screenshot](http://www.brameulaers.net/blender/addons/github_images/BRM_bake_instructions.png)
+![UI screenshot](http://www.brameulaers.net/blender/addons/github_images/easybake_instructions.png)
 
 **currently supports:**
 
