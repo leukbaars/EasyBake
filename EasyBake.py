@@ -374,6 +374,10 @@ class EasyBake(bpy.types.Operator):
         
         #setup
 
+    #HOTFIX get out of local view 
+        if context.space_data.local_view:
+            bpy.ops.view3d.localview()
+
     #1 unhide everything to be baked
         if not context.scene.UseLowOnly:
             unhide(context.scene.hipoly)
@@ -495,6 +499,7 @@ class EasyBake(bpy.types.Operator):
 
             bpy.context.scene.cycles.samples = context.scene.samplesNormal
             bpy.ops.object.bake(type='NORMAL', use_clear=True, use_selected_to_active=True, normal_space='TANGENT')
+            #bpy.ops.object.bake('INVOKE_DEFAULT', type='NORMAL', use_clear=True, use_selected_to_active=True, normal_space='TANGENT')
 
             bakeimage.filepath_raw = context.scene.bakeFolder+context.scene.bakePrefix+"_normal.tga"
             bakeimage.file_format = 'TARGA'
@@ -750,7 +755,7 @@ def register():
         )
     bpy.types.Scene.bakeFolder = bpy.props.StringProperty (
         name = "bakeFolder",
-        default = "C:\\export",
+        default = "C:\\export\\",
         description = "destination folder",
         subtype = 'DIR_PATH'
         )
