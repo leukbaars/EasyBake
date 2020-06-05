@@ -355,17 +355,18 @@ class EasyBake(bpy.types.Operator):
             self.report({'WARNING'}, "lowpoly needs to have a mesh!")
             return {'FINISHED'}   
         
-        hipolymeshes = 0
-        if bpy.data.objects.get(context.scene.hipoly) is None:
-            for o in bpy.data.collections[context.scene.hipoly].objects:
-                if o.type == 'MESH':
-                    hipolymeshes+=1
-        else:
-            if bpy.data.objects[context.scene.hipoly].type == 'MESH':
-                hipolymeshes = 1
-        if hipolymeshes == 0:
-            self.report({'WARNING'}, "hipoly needs to have a mesh!")
-            return {'FINISHED'}
+        if not context.scene.UseLowOnly:
+            hipolymeshes = 0
+            if bpy.data.objects.get(context.scene.hipoly) is None:
+                for o in bpy.data.collections[context.scene.hipoly].objects:
+                    if o.type == 'MESH':
+                        hipolymeshes+=1
+            else:
+                if bpy.data.objects[context.scene.hipoly].type == 'MESH':
+                    hipolymeshes = 1
+            if hipolymeshes == 0:
+                self.report({'WARNING'}, "hipoly needs to have a mesh!")
+                return {'FINISHED'}
         
         if context.scene.cageEnabled and bpy.data.objects[context.scene.cage].type != 'MESH':
             self.report({'WARNING'}, "cage needs to be a mesh!")
