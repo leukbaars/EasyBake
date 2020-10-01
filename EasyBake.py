@@ -17,18 +17,18 @@ from bpy.props import EnumProperty, BoolProperty, StringProperty, FloatProperty,
 
 
 def unhide(objectType):
-    if bpy.data.objects.get(objectType) is None:
-        for o in bpy.data.collections[objectType].objects:
+    if objectType is None:
+        for o in objectType.objects:
             o.hide_viewport = False
     else:
-        bpy.data.objects[objectType].hide_viewport = False
+        objectType.hide_viewport = False
 
 def hide(objectType):
-    if bpy.data.objects.get(objectType) is None:
-        for o in bpy.data.collections[objectType].objects:
+    if objectType is None:
+        for o in objectType.objects:
             o.hide_viewport = True
     else:
-        bpy.data.objects[objectType].hide_viewport = True
+        objectType.hide_viewport = True
 
 
 class EasyBakeUIPanel(bpy.types.Panel):
@@ -55,6 +55,8 @@ class EasyBakeUIPanel(bpy.types.Panel):
             row.prop_search(context.scene, "lowpoly", bpy.data, "collections", text="", icon="MESH_ICOSPHERE")
         if context.scene.lowpolyGroup is False:
             row.prop_search(context.scene, "lowpoly", context.scene, "objects", text="", icon="MESH_ICOSPHERE")
+
+            
         
         
 
@@ -200,10 +202,11 @@ class EasyBakeUIToggle(bpy.types.Operator):
             bpy.ops.object.mode_set(mode='OBJECT')
 
         #test lowpoly/hipoly exists
-        if bpy.data.objects.get(context.scene.lowpoly) is None and not context.scene.lowpoly in bpy.data.collections:
+
+        if context.scene.lowpoly is None and not context.scene.lowpoly in bpy.data.collections:
             self.report({'WARNING'}, "Select a valid lowpoly object or group!")
             return {'FINISHED'}
-        if bpy.data.objects.get(context.scene.hipoly) is None and not context.scene.hipoly in bpy.data.collections:
+        if context.scene.hipoly is None and not context.scene.hipoly in bpy.data.collections:
             self.report({'WARNING'}, "Select a valid hipoly object or group!")
             return {'FINISHED'}
 
@@ -273,7 +276,7 @@ class EasyBakeUIHide(bpy.types.Operator):
 
         if self.targetmesh == "lowpoly":
 
-            if bpy.data.objects.get(context.scene.lowpoly) is None and not context.scene.lowpoly in bpy.data.collections:
+            if context.scene.lowpoly is None and not context.scene.lowpoly in bpy.data.collections:
                 self.report({'WARNING'}, "Select a valid lowpoly object or collection!")
                 return {'FINISHED'}
 
@@ -286,8 +289,8 @@ class EasyBakeUIHide(bpy.types.Operator):
                     unhide(context.scene.lowpoly)
 
         if self.targetmesh == "hipoly":
-
-            if bpy.data.objects.get(context.scene.hipoly) is None and not context.scene.hipoly in bpy.data.collections:
+            
+            if context.scene.hipoly is None and not context.scene.hipoly in bpy.data.collections:
                 self.report({'WARNING'}, "Select a valid hipoly object or collection!")
                 return {'FINISHED'}
 
@@ -331,10 +334,11 @@ class EasyBake(bpy.types.Operator):
 
 
         #test lowpoly/hipoly/cage exists
-        if bpy.data.objects.get(context.scene.lowpoly) is None and not context.scene.lowpoly in bpy.data.collections:
+        
+        if context.scene.lowpoly is None and not context.scene.lowpoly in bpy.data.collections:
             self.report({'WARNING'}, "Select a valid lowpoly object or collection!")
             return {'FINISHED'}
-        if bpy.data.objects.get(context.scene.hipoly) is None and not context.scene.hipoly in bpy.data.collections and not context.scene.UseLowOnly:
+        if context.scene.hipoly is None and not context.scene.hipoly in bpy.data.collections and not context.scene.UseLowOnly:
             self.report({'WARNING'}, "Select a valid hipoly object or collection!")
             return {'FINISHED'}
         if bpy.data.objects.get(context.scene.cage) is None and context.scene.cageEnabled:
@@ -344,12 +348,12 @@ class EasyBake(bpy.types.Operator):
 
         #test if lowpoly, highpoly and cage objects are actually models
         lowpolymeshes = 0
-        if bpy.data.objects.get(context.scene.lowpoly) is None:
+        if context.scene.lowpoly is None:
             for o in bpy.data.collections[context.scene.lowpoly].objects:
                 if o.type == 'MESH':
                     lowpolymeshes+=1
         else:
-            if bpy.data.objects[context.scene.lowpoly].type == 'MESH':
+            if context.scene.lowpoly.type == 'MESH':
                 lowpolymeshes = 1
         if lowpolymeshes == 0:
             self.report({'WARNING'}, "lowpoly needs to have a mesh!")
@@ -357,12 +361,12 @@ class EasyBake(bpy.types.Operator):
         
         if not context.scene.UseLowOnly:
             hipolymeshes = 0
-            if bpy.data.objects.get(context.scene.hipoly) is None:
+            if context.scene.hipoly is None:
                 for o in bpy.data.collections[context.scene.hipoly].objects:
                     if o.type == 'MESH':
                         hipolymeshes+=1
             else:
-                if bpy.data.objects[context.scene.hipoly].type == 'MESH':
+                if context.scene.hipoly.type == 'MESH':
                     hipolymeshes = 1
             if hipolymeshes == 0:
                 self.report({'WARNING'}, "hipoly needs to have a mesh!")
@@ -395,9 +399,9 @@ class EasyBake(bpy.types.Operator):
         orig_lowpoly = None
 
         #if collection, create temporary lowpoly object
-        if bpy.data.objects.get(context.scene.lowpoly) is None:   
-            bpy.data.collections[context.scene.lowpoly].hide_render = False
-            for o in bpy.data.collections[context.scene.lowpoly].objects:
+        if context.scene.lowpoly is None:   
+            context.scene.lowpoly.hide_render = False
+            for o in context.scene.lowpoly.objects:
                 if o.type == 'MESH':
                     o.hide_viewport = False
                     o.select_set(state=True)
@@ -410,10 +414,10 @@ class EasyBake(bpy.types.Operator):
             lowpolyobject = bpy.context.selected_objects[0].name
             bpy.data.objects[lowpolyobject].hide_render = False
         else:
-            bpy.data.objects[context.scene.lowpoly].hide_viewport = False
-            bpy.data.objects[context.scene.lowpoly].hide_render = False
-            bpy.data.objects[context.scene.lowpoly].select_set(state=True)
-            orig_lowpoly = bpy.data.objects[context.scene.lowpoly]
+            context.scene.lowpoly.hide_viewport = False
+            context.scene.lowpoly.hide_render = False
+            context.scene.lowpoly.select_set(state=True)
+            orig_lowpoly = context.scene.lowpoly
             lowpolyobject = context.scene.lowpoly
 
     # test if cage has same tri count:
@@ -429,7 +433,7 @@ class EasyBake(bpy.types.Operator):
                 return {'FINISHED'}
 
     #4 test if lowpoly has a material and UV
-        if len(bpy.data.objects[lowpolyobject].data.materials) == 0:
+        if len(context.scene.lowpoly.data.materials) == 0:
             if context.scene.lowpolyGroup:
                 bpy.ops.object.select_all(action='DESELECT')
                 bpy.data.objects[lowpolyobject].select_set(state=True)
@@ -437,7 +441,7 @@ class EasyBake(bpy.types.Operator):
             self.report({'WARNING'}, "Material required on low poly mesh!")
             return {'FINISHED'}
 
-        if len(bpy.data.objects[lowpolyobject].data.uv_layers) == 0:
+        if len(context.scene.lowpoly.data.uv_layers) == 0:
             if context.scene.lowpolyGroup:
                 bpy.ops.object.select_all(action='DESELECT')
                 bpy.data.objects[lowpolyobject].select_set(state=True)
@@ -457,20 +461,20 @@ class EasyBake(bpy.types.Operator):
     #7 select hipoly target
         if not context.scene.UseLowOnly:
         #select hipoly object or collection:
-            if bpy.data.objects.get(context.scene.hipoly) is None:
-                bpy.data.collections[context.scene.hipoly].hide_render = False
-                for o in bpy.data.collections[context.scene.hipoly].objects:
+            if context.scene.hipoly is None:
+                context.scene.hipoly.hide_render = False
+                for o in context.scene.hipoly.objects:
                     if o.type == 'MESH':
                         o.hide_viewport = False
                         o.hide_render = False
                         o.select_set(state=True)
             else:
-                bpy.data.objects[context.scene.hipoly].hide_viewport = False
-                bpy.data.objects[context.scene.hipoly].hide_render = False
-                bpy.data.objects[context.scene.hipoly].select_set(state=True)
+                context.scene.hipoly.hide_viewport = False
+                context.scene.hipoly.hide_render = False
+                context.scene.hipoly.select_set(state=True)
 
     #8 select lowpoly target
-        bpy.context.view_layer.objects.active = bpy.data.objects[lowpolyobject]
+        bpy.context.view_layer.objects.active = context.scene.lowpoly
 
     #9 select lowpoly material and create temporary render target
         orig_mat = bpy.context.active_object.data.materials[0]
@@ -586,35 +590,35 @@ class EasyBake(bpy.types.Operator):
 
         #rehide back to original state 
         if context.scene.lowpolyActive is True:
-            if bpy.data.objects.get(context.scene.lowpoly) is None:
-                for o in bpy.data.collections[context.scene.lowpoly].objects:
+            if context.scene.lowpoly is None:
+                for o in context.scene.lowpoly.objects:
                     o.hide_viewport = False
                     context.view_layer.objects.active = o
             else:
-                bpy.data.objects[context.scene.lowpoly].hide_viewport = False
-                context.view_layer.objects.active = bpy.data.objects[context.scene.lowpoly]
+                context.scene.lowpoly.hide_viewport = False
+                context.view_layer.objects.active = context.scene.lowpoly
         else:
-            if bpy.data.objects.get(context.scene.lowpoly) is None:
-                for o in bpy.data.collections[context.scene.lowpoly].objects:
+            if context.scene.lowpoly is None:
+                for o in context.scene.lowpoly.objects:
                     o.hide_viewport = True
             else:
-                bpy.data.objects[context.scene.lowpoly].hide_viewport = True
+                context.scene.lowpoly.hide_viewport = True
 
         if not context.scene.UseLowOnly:
             if context.scene.hipolyActive is True:
-                if bpy.data.objects.get(context.scene.hipoly) is None:
-                    for o in bpy.data.collections[context.scene.hipoly].objects:
+                if context.scene.hipoly is None:
+                    for o in context.scene.hipoly.objects:
                         o.hide_viewport = False
                         context.view_layer.objects.active = o
                 else:
-                    bpy.data.objects[context.scene.hipoly].hide_viewport = False
-                    context.view_layer.objects.active = bpy.data.objects[context.scene.hipoly]
+                    context.scene.hipoly.hide_viewport = False
+                    context.view_layer.objects.active =context.scene.hipoly
             else:
-                if bpy.data.objects.get(context.scene.hipoly) is None:
-                    for o in bpy.data.collections[context.scene.hipoly].objects:
+                if context.scene.hipoly is None:
+                    for o in context.scene.hipoly.objects:
                         o.hide_viewport = True
                 else:
-                    bpy.data.objects[context.scene.hipoly].hide_viewport = True
+                    context.scene.hipoly.hide_viewport = True
 
         return {'FINISHED'}
 
@@ -638,9 +642,9 @@ def register():
     bpy.utils.register_class(EasyBakeUIToggle)
     bpy.utils.register_class(EasyBakeUIIncrement)
 
-    bpy.types.Scene.lowpoly = bpy.props.StringProperty (
+    bpy.types.Scene.lowpoly = bpy.props.PointerProperty (
         name = "lowpoly",
-        default = "lowpoly",
+        type=bpy.types.Object,
         description = "lowpoly object",
         )
     bpy.types.Scene.lowpolyActive = bpy.props.BoolProperty (
@@ -653,9 +657,9 @@ def register():
         default = False,
         description = "enable lowpoly collection",
         )
-    bpy.types.Scene.hipoly = bpy.props.StringProperty (
+    bpy.types.Scene.hipoly = bpy.props.PointerProperty (
         name = "hipoly",
-        default = "hipoly",
+        type=bpy.types.Object,
         description = "hipoly object or group",
         )
     bpy.types.Scene.hipolyActive = bpy.props.BoolProperty (
