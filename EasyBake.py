@@ -234,7 +234,11 @@ class EasyBakeUIIncrement(bpy.types.Operator):
     bl_idname = "brm.bakeuiincrement"
     bl_label = "increment"
 
-    target = bpy.props.StringProperty()
+    # Needed for an API change that occured in 2.93
+    if bpy.app.version < (2, 93, 0):
+        target = bpy.props.StringProperty()
+    else:
+        target : bpy.props.StringProperty()
 
     def execute(self, context):
         if self.target == "width/2" and context.scene.bakeWidth > 4:
@@ -264,7 +268,11 @@ class EasyBakeUIHide(bpy.types.Operator):
     bl_label = "hide"
     bl_options = {"UNDO"}
 
-    targetmesh = bpy.props.StringProperty()
+    # Needed for an API change that occured in 2.93
+    if bpy.app.version < (2, 93, 0):
+        targetmesh = bpy.props.StringProperty()
+    else:
+        targetmesh : bpy.props.StringProperty()
 
     def execute(self, context):
 
