@@ -171,8 +171,6 @@ class EasyBakeUIPanel(bpy.types.Panel):
         row = col.row(align = True)
         row.prop(context.scene, "bakeUV", icon="SHADING_WIRE", text="UV Snapshot")
         
-        
-        
         col = layout.column(align=True)
         col.separator()
         row = col.row(align = True)
@@ -234,7 +232,7 @@ class EasyBakeUIIncrement(bpy.types.Operator):
     bl_idname = "brm.bakeuiincrement"
     bl_label = "increment"
 
-    target = bpy.props.StringProperty()
+    target : bpy.props.StringProperty()
 
     def execute(self, context):
         if self.target == "width/2" and context.scene.bakeWidth > 4:
@@ -264,12 +262,21 @@ class EasyBakeUIHide(bpy.types.Operator):
     bl_label = "hide"
     bl_options = {"UNDO"}
 
-    targetmesh = bpy.props.StringProperty()
+    targetmesh : bpy.props.StringProperty()
 
     def execute(self, context):
 
+
+        #test if collection:
+        if context.scene.hipoly.bl_rna.name == "Collection":
+            print("i am a collection!")
+
+        if context.scene.hipoly.bl_rna.name == "Object":
+            print("i am an object!")
+        #print(context.scene.hipoly)
+        #print(context.scene.lowpoly)
+
         #test lowpoly/hipoly exists
-        
         if bpy.context.object.mode == 'EDIT':
             bpy.ops.object.mode_set(mode='OBJECT')
         
@@ -348,8 +355,9 @@ class EasyBake(bpy.types.Operator):
 
         #test if lowpoly, highpoly and cage objects are actually models
         lowpolymeshes = 0
-        if context.scene.lowpoly is None:
-            for o in bpy.data.collections[context.scene.lowpoly].objects:
+
+        if context.scene.lowpoly.bl_rna.name == "Collection":
+            for o in bpy.context.scene.lowpoly.all_objects:
                 if o.type == 'MESH':
                     lowpolymeshes+=1
         else:
@@ -361,8 +369,8 @@ class EasyBake(bpy.types.Operator):
         
         if not context.scene.UseLowOnly:
             hipolymeshes = 0
-            if context.scene.hipoly is None:
-                for o in bpy.data.collections[context.scene.hipoly].objects:
+            if context.scene.hipoly.bl_rna.name == "Collection":
+                for o in bpy.context.scene.hipoly.all_objects:
                     if o.type == 'MESH':
                         hipolymeshes+=1
             else:
@@ -399,9 +407,12 @@ class EasyBake(bpy.types.Operator):
         orig_lowpoly = None
 
         #if collection, create temporary lowpoly object
-        if context.scene.lowpoly is None:   
+        if context.scene.lowpoly.bl_rna.name == "Collection":
             context.scene.lowpoly.hide_render = False
-            for o in context.scene.lowpoly.objects:
+            for o in bpy.context.scene.lowpoly.all_objects:
+        #if context.scene.lowpoly is None:   
+        #    context.scene.lowpoly.hide_render = False
+        #    for o in context.scene.lowpoly.objects:
                 if o.type == 'MESH':
                     o.hide_viewport = False
                     o.select_set(state=True)
@@ -433,21 +444,21 @@ class EasyBake(bpy.types.Operator):
                 return {'FINISHED'}
 
     #4 test if lowpoly has a material and UV
-        if len(context.scene.lowpoly.data.materials) == 0:
-            if context.scene.lowpolyGroup:
-                bpy.ops.object.select_all(action='DESELECT')
-                bpy.data.objects[lowpolyobject].select_set(state=True)
-                bpy.ops.object.delete(use_global=False)
-            self.report({'WARNING'}, "Material required on low poly mesh!")
-            return {'FINISHED'}
+        #if len(context.scene.lowpoly.data.materials) == 0:
+        #    if context.scene.lowpolyGroup:
+        #        bpy.ops.object.select_all(action='DESELECT')
+        #        bpy.data.objects[lowpolyobject].select_set(state=True)
+        #        bpy.ops.object.delete(use_global=False)
+        #    self.report({'WARNING'}, "Material required on low poly mesh!")
+        #    return {'FINISHED'}
 
-        if len(context.scene.lowpoly.data.uv_layers) == 0:
-            if context.scene.lowpolyGroup:
-                bpy.ops.object.select_all(action='DESELECT')
-                bpy.data.objects[lowpolyobject].select_set(state=True)
-                bpy.ops.object.delete(use_global=False)
-            self.report({'WARNING'}, "low poly mesh has no UV!")
-            return {'FINISHED'}
+        #if len(context.scene.lowpoly.data.uv_layers) == 0:
+        #    if context.scene.lowpolyGroup:
+        #        bpy.ops.object.select_all(action='DESELECT')
+        #        bpy.data.objects[lowpolyobject].select_set(state=True)
+        #        bpy.ops.object.delete(use_global=False)
+        #    self.report({'WARNING'}, "low poly mesh has no UV!")
+        #    return {'FINISHED'}
 
     #5 remember render engine and switch to CYCLES for baking
         orig_renderer = bpy.data.scenes[bpy.context.scene.name].render.engine
@@ -461,9 +472,9 @@ class EasyBake(bpy.types.Operator):
     #7 select hipoly target
         if not context.scene.UseLowOnly:
         #select hipoly object or collection:
-            if context.scene.hipoly is None:
+            if context.scene.hipoly.bl_rna.name == "Collection":
                 context.scene.hipoly.hide_render = False
-                for o in context.scene.hipoly.objects:
+                for o in bpy.context.scene.hipoly.all_objects:
                     if o.type == 'MESH':
                         o.hide_viewport = False
                         o.hide_render = False
@@ -471,10 +482,15 @@ class EasyBake(bpy.types.Operator):
             else:
                 context.scene.hipoly.hide_viewport = False
                 context.scene.hipoly.hide_render = False
+
                 context.scene.hipoly.select_set(state=True)
 
     #8 select lowpoly target
-        bpy.context.view_layer.objects.active = context.scene.lowpoly
+        print("whats happening here?")
+        print(context.scene.lowpoly)
+        print(lowpolyobject)
+        #bpy.context.view_layer.objects.active = bpy.data.objects[lowpolyobject]
+        bpy.context.view_layer.objects.active = lowpolyobject
 
     #9 select lowpoly material and create temporary render target
         orig_mat = bpy.context.active_object.data.materials[0]
