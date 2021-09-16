@@ -36,7 +36,7 @@ class EasyBakeUIPanel(bpy.types.Panel):
     bl_label = "EasyBake"
     bl_space_type = 'VIEW_3D'
     bl_region_type = "UI"
-    bl_category = "Bake"
+    bl_category = "EasyBake"
 
 
     def draw_header(self, _):
@@ -142,34 +142,66 @@ class EasyBakeUIPanel(bpy.types.Panel):
         
         row = col.row(align = True)
         row.enabled = not context.scene.UseLowOnly
-        row.prop(context.scene, "bakeNormal", icon="SHADING_RENDERED", text="Tangent Normal")
+        
+        if not context.scene.bakeNormal:
+            row.prop(context.scene, "bakeNormal", icon="SHADING_RENDERED", text="Tangent Normal")
         if context.scene.bakeNormal:
+            row.prop(context.scene, "bakeNormal", icon="SHADING_RENDERED", text=" ")
+            row.prop(context.scene, "affixNormal", text="")
             row.prop(context.scene, "samplesNormal", text="")
 
         row = col.row(align = True)
         row.enabled = not context.scene.UseLowOnly
-        row.prop(context.scene, "bakeObject", icon="SHADING_RENDERED", text="Object Normal")
+        if not context.scene.bakeObject:
+            row.prop(context.scene, "bakeObject", icon="SHADING_RENDERED", text="Object Normal")
         if context.scene.bakeObject:
+            row.prop(context.scene, "bakeObject", icon="SHADING_RENDERED", text=" ")
+            row.prop(context.scene, "affixObject", text="")
             row.prop(context.scene, "samplesObject", text="")
+            
         row = col.row(align = True)
-        row.prop(context.scene, "bakeAO", icon="SHADING_SOLID", text="Occlusion")
+        if not context.scene.bakeAO:
+            row.prop(context.scene, "bakeAO", icon="SHADING_SOLID", text="Occlusion")
         if context.scene.bakeAO:
+            row.prop(context.scene, "bakeAO", icon="SHADING_SOLID", text=" ")
+            row.prop(context.scene, "affixAO", text="")
             row.prop(context.scene, "samplesAO", text="")
         
         row = col.row(align = True)
         row.enabled = not context.scene.UseLowOnly
-        row.prop(context.scene, "bakeColor", icon="SHADING_TEXTURE", text="Color")
+        if not context.scene.bakeColor:
+            row.prop(context.scene, "bakeColor", icon="SHADING_TEXTURE", text="Color")
         if context.scene.bakeColor:
+            row.prop(context.scene, "bakeColor", icon="SHADING_TEXTURE", text=" ")
+            row.prop(context.scene, "affixColor", text="")
             row.prop(context.scene, "samplesColor", text="")
 
         row = col.row(align = True)
         row.enabled = not context.scene.UseLowOnly
-        row.prop(context.scene, "bakeRoughness", icon="SHADING_TEXTURE", text="Roughness")
+        if not context.scene.bakeRoughness:
+            row.prop(context.scene, "bakeRoughness", icon="SHADING_TEXTURE", text="Roughness")
         if context.scene.bakeRoughness:
+            row.prop(context.scene, "bakeRoughness", icon="SHADING_TEXTURE", text=" ")
+            row.prop(context.scene, "affixRoughness", text="")
             row.prop(context.scene, "samplesRoughness", text="")
+            
+        row = col.row(align = True)
+        row.enabled = not context.scene.UseLowOnly
+        if not context.scene.bakeEmission:
+            row.prop(context.scene, "bakeEmission", icon="SHADING_TEXTURE", text="Emission")
+        if context.scene.bakeEmission:
+            row.prop(context.scene, "bakeEmission", icon="SHADING_TEXTURE", text=" ")
+            row.prop(context.scene, "affixEmission", text="")
+            row.prop(context.scene, "samplesEmission", text="")
 
         row = col.row(align = True)
-        row.prop(context.scene, "bakeUV", icon="SHADING_WIRE", text="UV Snapshot")
+        if not context.scene.bakeUV:
+            row.prop(context.scene, "bakeUV", icon="SHADING_WIRE", text="UV Snapshot")
+        if context.scene.bakeUV:
+            row.prop(context.scene, "bakeUV", icon="SHADING_WIRE", text=" ")
+            row.prop(context.scene, "affixUV", text="")
+            row.prop(context.scene, "bakeUV", icon="BLANK1", text=" ")
+            
         
         col = layout.column(align=True)
         col.separator()
@@ -520,29 +552,23 @@ class EasyBake(bpy.types.Operator):
 
             bpy.context.scene.cycles.samples = context.scene.samplesNormal
             bpy.ops.object.bake(type='NORMAL', use_clear=True, use_selected_to_active=True, normal_space='TANGENT')
-            #bpy.ops.object.bake('INVOKE_DEFAULT', type='NORMAL', use_clear=True, use_selected_to_active=True, normal_space='TANGENT')
-
-            bakeimage.filepath_raw = context.scene.bakeFolder+context.scene.bakePrefix+"_normal.tga"
+            bakeimage.filepath_raw = context.scene.bakeFolder+context.scene.bakePrefix+context.scene.affixNormal+".tga"
             bakeimage.file_format = 'TARGA'
             bakeimage.save()
         
         if context.scene.bakeObject and not context.scene.UseLowOnly:
 
             bpy.context.scene.cycles.samples = context.scene.samplesObject
-
             bpy.ops.object.bake(type='NORMAL', use_clear=True, use_selected_to_active=True, normal_space='OBJECT')
-
-            bakeimage.filepath_raw = context.scene.bakeFolder+context.scene.bakePrefix+"_object.tga"
+            bakeimage.filepath_raw = context.scene.bakeFolder+context.scene.bakePrefix+context.scene.affixObject+".tga"
             bakeimage.file_format = 'TARGA'
             bakeimage.save()
 
         if context.scene.bakeAO:
 
             bpy.context.scene.cycles.samples = context.scene.samplesAO
-
             bpy.ops.object.bake(type='AO', use_clear=True, use_selected_to_active=not context.scene.UseLowOnly)
-
-            bakeimage.filepath_raw = context.scene.bakeFolder+context.scene.bakePrefix+"_ao.tga"
+            bakeimage.filepath_raw = context.scene.bakeFolder+context.scene.bakePrefix+context.scene.affixAO+".tga"
             bakeimage.file_format = 'TARGA'
             bakeimage.save()
 
@@ -552,20 +578,24 @@ class EasyBake(bpy.types.Operator):
             bpy.context.scene.render.bake.use_pass_direct = False
             bpy.context.scene.render.bake.use_pass_indirect = False
             bpy.context.scene.render.bake.use_pass_color = True
-
             bpy.ops.object.bake(type='DIFFUSE', use_clear=True, use_selected_to_active=True)
-
-            bakeimage.filepath_raw = context.scene.bakeFolder+context.scene.bakePrefix+"_color.tga"
+            bakeimage.filepath_raw = context.scene.bakeFolder+context.scene.bakePrefix+context.scene.affixColor+".tga"
             bakeimage.file_format = 'TARGA'
             bakeimage.save()
         
         if context.scene.bakeRoughness and not context.scene.UseLowOnly:
 
             bpy.context.scene.cycles.samples = context.scene.samplesRoughness
-
             bpy.ops.object.bake(type='ROUGHNESS', use_clear=True, use_selected_to_active=True)
+            bakeimage.filepath_raw = context.scene.bakeFolder+context.scene.bakePrefix+context.scene.affixRoughness+".tga"
+            bakeimage.file_format = 'TARGA'
+            bakeimage.save()
+            
+        if context.scene.bakeEmission and not context.scene.UseLowOnly:
 
-            bakeimage.filepath_raw = context.scene.bakeFolder+context.scene.bakePrefix+"_roughness.tga"
+            bpy.context.scene.cycles.samples = context.scene.samplesEmission
+            bpy.ops.object.bake(type='EMIT', use_clear=True, use_selected_to_active=True)
+            bakeimage.filepath_raw = context.scene.bakeFolder+context.scene.bakePrefix+context.scene.affixEmission+".tga"
             bakeimage.file_format = 'TARGA'
             bakeimage.save()
 
@@ -576,12 +606,9 @@ class EasyBake(bpy.types.Operator):
             bpy.ops.object.editmode_toggle()
             original_type = bpy.context.area.type
             bpy.context.area.type = "IMAGE_EDITOR"
-            uvfilepath = context.scene.bakeFolder+context.scene.bakePrefix+"_uv.png"
+            uvfilepath = context.scene.bakeFolder+context.scene.bakePrefix+context.scene.affixUV+".png"
             bpy.ops.uv.export_layout(filepath=uvfilepath, size=(context.scene.bakeWidth, context.scene.bakeHeight))
             bpy.context.area.type = original_type
-
-
-
 
 
 
@@ -646,181 +673,62 @@ class EasyBake(bpy.types.Operator):
 
 
 
-
-
-
-
+classes = (
+        EasyBake,
+        EasyBakeUIHide,
+        EasyBakeUIPanel,
+        EasyBakeUIToggle,
+        EasyBakeUIIncrement,
+    )
 
 def register():
-    bpy.utils.register_class(EasyBake)
-    bpy.utils.register_class(EasyBakeUIHide)
-    bpy.utils.register_class(EasyBakeUIPanel)
-    bpy.utils.register_class(EasyBakeUIToggle)
-    bpy.utils.register_class(EasyBakeUIIncrement)
+    for cls in classes:
+        bpy.utils.register_class(cls)
 
-    bpy.types.Scene.lowpoly = bpy.props.PointerProperty (
-        name = "lowpoly",
-        type=bpy.types.Object,
-        description = "lowpoly object",
-        )
-    bpy.types.Scene.lowpolyActive = bpy.props.BoolProperty (
-        name = "lowpolyActive",
-        default = True,
-        description = "lowpolyActive",
-        )
-    bpy.types.Scene.lowpolyGroup = bpy.props.BoolProperty (
-        name = "lowpolyGroup",
-        default = False,
-        description = "enable lowpoly collection",
-        )
-    bpy.types.Scene.hipoly = bpy.props.PointerProperty (
-        name = "hipoly",
-        type=bpy.types.Object,
-        description = "hipoly object or group",
-        )
-    bpy.types.Scene.hipolyActive = bpy.props.BoolProperty (
-        name = "hipolyActive",
-        default = True,
-        description = "hipolyActive",
-        )
-    bpy.types.Scene.hipolyGroup = bpy.props.BoolProperty (
-        name = "hipolyGroup",
-        default = False,
-        description = "enable hipoly collection",
-        )
-    bpy.types.Scene.cage = bpy.props.StringProperty (
-        name = "cage",
-        default = "cage",
-        description = "cage object",
-        )
-    bpy.types.Scene.cageActive = bpy.props.BoolProperty (
-        name = "cageActive",
-        default = True,
-        description = "cageActive",
-        )
-    bpy.types.Scene.cageEnabled = bpy.props.BoolProperty (
-        name = "cageEnabled",
-        default = False,
-        description = "Enable cage object for baking",
-        )
-    bpy.types.Scene.bakeNormal = bpy.props.BoolProperty (
-        name = "bakeNormal",
-        default = False,
-        description = "Bake Tangent Space Normal Map",
-        )
-    bpy.types.Scene.bakeObject = bpy.props.BoolProperty (
-        name = "bakeObject",
-        default = False,
-        description = "Bake Object Space Normal Map",
-        )
-    bpy.types.Scene.bakeAO = bpy.props.BoolProperty (
-        name = "bakeAO",
-        default = False,
-        description = "Bake Ambient Occlusion Map",
-        )
-    bpy.types.Scene.bakeColor = bpy.props.BoolProperty (
-        name = "bakeColor",
-        default = False,
-        description = "Bake Albedo Color Map",
-        )
-    bpy.types.Scene.bakeRoughness = bpy.props.BoolProperty (
-        name = "bakeRoughness",
-        default = False,
-        description = "Bake Roughness Map",
-        )
+    bpy.types.Scene.lowpoly = bpy.props.PointerProperty (name = "lowpoly",  type=bpy.types.Object, description = "lowpoly object")
+    bpy.types.Scene.lowpolyActive = bpy.props.BoolProperty (name = "lowpolyActive", default = True, description = "lowpolyActive")
+    bpy.types.Scene.lowpolyGroup = bpy.props.BoolProperty (name = "lowpolyGroup",default = False,description = "enable lowpoly collection")
+    bpy.types.Scene.hipoly = bpy.props.PointerProperty (name = "hipoly",type=bpy.types.Object,description = "hipoly object or group")
+    bpy.types.Scene.hipolyActive = bpy.props.BoolProperty (name = "hipolyActive",default = True,description = "hipolyActive")
+    bpy.types.Scene.hipolyGroup = bpy.props.BoolProperty (name = "hipolyGroup",default = False,description = "enable hipoly collection")
+    bpy.types.Scene.cage = bpy.props.StringProperty (name = "cage",default = "cage",description = "cage object")
+    bpy.types.Scene.cageActive = bpy.props.BoolProperty (name = "cageActive",default = True,description = "cageActive")
+    bpy.types.Scene.cageEnabled = bpy.props.BoolProperty (name = "cageEnabled",default = False,description = "Enable cage object for baking")
     
-    bpy.types.Scene.bakeUV = bpy.props.BoolProperty (
-        name = "bakeUV",
-        default = False,
-        description = "Bake UV Wireframe Snapshot of Lowpoly Mesh",
-        )
-    bpy.types.Scene.samplesNormal = bpy.props.IntProperty (
-        name = "samplesNormal",
-        default = 8,
-        description = "Tangent Space Normal Map Sample Count",
-        )
-    bpy.types.Scene.samplesObject = bpy.props.IntProperty (
-        name = "samplesObject",
-        default = 8,
-        description = "Object Space Normal Map Sample Count",
-        )
-    bpy.types.Scene.samplesAO = bpy.props.IntProperty (
-        name = "samplesAO",
-        default = 128,
-        description = "Ambient Occlusion Map Sample Count",
-        )
-    bpy.types.Scene.samplesColor = bpy.props.IntProperty (
-        name = "samplesColor",
-        default = 1,
-        description = "Color Map Sample Count",
-        )
-    bpy.types.Scene.samplesRoughness = bpy.props.IntProperty (
-        name = "samplesRoughness",
-        default = 1,
-        description = "Roughness Map Sample Count",
-        )
-    bpy.types.Scene.bakeWidth = bpy.props.IntProperty (
-        name = "bakeWidth",
-        default = 512,
-        description = "Export Texture Width",
-        )  
-    bpy.types.Scene.bakeHeight = bpy.props.IntProperty (
-        name = "bakeHeight",
-        default = 512,
-        description = "Export Texture Height",
-        )
-    bpy.types.Scene.bakePrefix = bpy.props.StringProperty (
-        name = "bakePrefix",
-        default = "export",
-        description = "export filename",
-        )
-    bpy.types.Scene.bakeFolder = bpy.props.StringProperty (
-        name = "bakeFolder",
-        default = "C:\\export\\",
-        description = "destination folder",
-        subtype = 'DIR_PATH'
-        )
-    bpy.types.Scene.UseBlenderGame = bpy.props.BoolProperty (
-        name = "UseBlenderGame",
-        default = True,
-        description = "Use Blender Game for lowpoly display",
-        )
-    bpy.types.Scene.UseLowOnly = bpy.props.BoolProperty (
-        name = "UseLowOnly",
-        default = False,
-        description = "Only bake lowpoly on itself",
-        )
+    bpy.types.Scene.bakeNormal = bpy.props.BoolProperty (name = "bakeNormal",default = False,description = "Bake Tangent Space Normal Map")
+    bpy.types.Scene.bakeObject = bpy.props.BoolProperty (name = "bakeObject",default = False,description = "Bake Object Space Normal Map")
+    bpy.types.Scene.bakeAO = bpy.props.BoolProperty (name = "bakeAO",default = False,description = "Bake Ambient Occlusion Map")
+    bpy.types.Scene.bakeColor = bpy.props.BoolProperty (name = "bakeColor",default = False,description = "Bake Albedo Color Map")
+    bpy.types.Scene.bakeRoughness = bpy.props.BoolProperty (name = "bakeRoughness",default = False,description = "Bake Roughness Map")
+    bpy.types.Scene.bakeEmission = bpy.props.BoolProperty (name = "bakeEmission",default = False,description = "Bake Emission Map") 
+    bpy.types.Scene.bakeUV = bpy.props.BoolProperty (name = "bakeUV",default = False,description = "Bake UV Wireframe Snapshot of Lowpoly Mesh")
+    
+    bpy.types.Scene.samplesNormal = bpy.props.IntProperty (name = "samplesNormal",default = 8,description = "Tangent Space Normal Map Sample Count")
+    bpy.types.Scene.samplesObject = bpy.props.IntProperty (name = "samplesObject",default = 8,description = "Object Space Normal Map Sample Count")
+    bpy.types.Scene.samplesAO = bpy.props.IntProperty (name = "samplesAO",default = 128,description = "Ambient Occlusion Map Sample Count")
+    bpy.types.Scene.samplesColor = bpy.props.IntProperty (name = "samplesColor",default = 1,description = "Color Map Sample Count")
+    bpy.types.Scene.samplesEmission = bpy.props.IntProperty (name = "samplesEmission",default = 1,description = "Emission Map Sample Count")
+    bpy.types.Scene.samplesRoughness = bpy.props.IntProperty (name = "samplesRoughness",default = 1,description = "Roughness Map Sample Count")
+    
+    bpy.types.Scene.bakeWidth = bpy.props.IntProperty (name = "bakeWidth",default = 512,description = "Export Texture Width")  
+    bpy.types.Scene.bakeHeight = bpy.props.IntProperty (name = "bakeHeight",default = 512,description = "Export Texture Height")
+    bpy.types.Scene.bakePrefix = bpy.props.StringProperty (name = "bakePrefix",default = "export",description = "export filename")
+    bpy.types.Scene.bakeFolder = bpy.props.StringProperty (name = "bakeFolder",default = "C:\\export\\",description = "destination folder",subtype = 'DIR_PATH')
+    bpy.types.Scene.UseLowOnly = bpy.props.BoolProperty (name = "UseLowOnly",default = False,description = "Only bake lowpoly on itself")
+    
+    bpy.types.Scene.affixNormal = bpy.props.StringProperty (name = "affixNormal",default = "_normal",description = "normal map affix")
+    bpy.types.Scene.affixObject = bpy.props.StringProperty (name = "affixObject",default = "_object",description = "object normal map affix")
+    bpy.types.Scene.affixAO = bpy.props.StringProperty (name = "affixAO",default = "_ao",description = "AO map affix")
+    bpy.types.Scene.affixColor = bpy.props.StringProperty (name = "affixColor",default = "_color",description = "color map affix")
+    bpy.types.Scene.affixRoughness = bpy.props.StringProperty (name = "affixRoughness",default = "_rough",description = "Roughness map affix")
+    bpy.types.Scene.affixEmission = bpy.props.StringProperty (name = "affixEmission",default = "_emit",description = "Emission map affix")
+    bpy.types.Scene.affixUV = bpy.props.StringProperty (name = "affixUV",default = "_uv",description = "UV map affix")
+
 
 def unregister():
-    bpy.utils.unregister_class(EasyBake)
-    bpy.utils.unregister_class(EasyBakeUIHide)
-    bpy.utils.unregister_class(EasyBakeUIPanel)
-    bpy.utils.unregister_class(EasyBakeUIToggle)
-    bpy.utils.unregister_class(EasyBakeUIIncrement)
+    for cls in reversed(classes):
+        bpy.utils.unregister_class(cls)
 
-    del bpy.types.Scene.lowpoly
-    del bpy.types.Scene.lowpolyActive
-    del bpy.types.Scene.hipoly
-    del bpy.types.Scene.hipolyActive
-    del bpy.types.Scene.cage
-    del bpy.types.Scene.cageActive
-    del bpy.types.Scene.cageEnabled
-    del bpy.types.Scene.bakeNormal
-    del bpy.types.Scene.bakeObject
-    del bpy.types.Scene.bakeAO
-    del bpy.types.Scene.bakeColor
-    del bpy.types.Scene.bakeRoughness
-    del bpy.types.Scene.bakeUV
-    del bpy.types.Scene.samplesNormal
-    del bpy.types.Scene.samplesAO
-    del bpy.types.Scene.samplesColor
-    del bpy.types.Scene.samplesRoughness
-    del bpy.types.Scene.samplesObject
-    del bpy.types.Scene.bakeWidth
-    del bpy.types.Scene.bakeHeight
-    del bpy.types.Scene.bakeFolder
-    del bpy.types.Scene.UseBlenderGame
-    del bpy.types.Scene.UseLowOnly
     
 if __name__ == "__main__":
     register()
