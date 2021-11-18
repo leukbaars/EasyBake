@@ -87,6 +87,13 @@ class target:
     DECREASE_HEIGHT = "DECREASE_HEIGHT"
 
 
+class brm:
+    UI_TOGGLE = "brm.bakeuitoggle"
+    UI_INCREMENT = "brm.bakeuiincrement"
+    UI_HIDE = "brm.bakeuihide"
+    BAKE = "brm.bake"
+
+
 def unhide(objectType):
     if objectType is None:
         for o in objectType.objects:
@@ -140,7 +147,7 @@ class PANEL_PT_EasyBakeUIPanel(bpy.types.Panel):
             hideicon = icon.HIDE_OFF
         if context.scene.lowpolyActive is False:
             hideicon = icon.HIDE_ON
-        op = row.operator("brm.bakeuihide", text="", icon=hideicon)
+        op = row.operator(brm.UI_HIDE, text="", icon=hideicon)
         op.targetmesh = "lowpoly"
         row = col.row(align=True)
         row.prop(context.scene, "hipolyGroup", text="", icon=icon.GROUP)
@@ -165,12 +172,12 @@ class PANEL_PT_EasyBakeUIPanel(bpy.types.Panel):
             hideicon = icon.HIDE_OFF
         if context.scene.hipolyActive is False:
             hideicon = icon.HIDE_ON
-        op = row.operator("brm.bakeuihide", text="", icon=hideicon)
+        op = row.operator(brm.UI_HIDE, text="", icon=hideicon)
         op.targetmesh = "hipoly"
         col = box.column(align=True)
         row = col.row(align=True)
         row.operator(
-            "brm.bakeuitoggle",
+            brm.UI_TOGGLE,
             text="Toggle hi/low",
             icon=icon.FILE_REFRESH)
         #row.prop(context.scene, "UseBlenderGame", icon=icon.MESH_UVSPHERE, text="")
@@ -199,23 +206,23 @@ class PANEL_PT_EasyBakeUIPanel(bpy.types.Panel):
         row = col.row(align=True)
         row.label(text="Width:")
         row.operator(
-            "brm.bakeuiincrement",
+            brm.UI_INCREMENT,
             text="",
             icon=icon.REMOVE).target = target.DECREASE_WIDTH
         row.prop(context.scene, "bakeWidth", text="")
         row.operator(
-            "brm.bakeuiincrement",
+            brm.UI_INCREMENT,
             text="",
             icon=icon.ADD).target = target.INCREASE_WIDTH
         row = col.row(align=True)
         row.label(text="Height:")
         row.operator(
-            "brm.bakeuiincrement",
+            brm.UI_INCREMENT,
             text="",
             icon=icon.REMOVE).target = target.DECREASE_HEIGHT
         row.prop(context.scene, "bakeHeight", text="")
         row.operator(
-            "brm.bakeuiincrement",
+            brm.UI_INCREMENT,
             text="",
             icon=icon.ADD).target = target.INCREASE_HEIGHT
         row = col.row(align=True)
@@ -341,7 +348,7 @@ class PANEL_PT_EasyBakeUIPanel(bpy.types.Panel):
 
 class EasyBakeUIToggle(bpy.types.Operator):
     """toggle lowpoly/hipoly"""
-    bl_idname = "brm.bakeuitoggle"
+    bl_idname = brm.UI_TOGGLE
     bl_label = "Toggle"
     bl_options = {bln.UNDO}
 
@@ -370,7 +377,7 @@ class EasyBakeUIToggle(bpy.types.Operator):
 
 class EasyBakeUIIncrement(bpy.types.Operator):
     """Double or half the size of the render target"""
-    bl_idname = "brm.bakeuiincrement"
+    bl_idname = brm.UI_INCREMENT
     bl_label = "increment"
 
     def options(self, context):
@@ -393,15 +400,13 @@ class EasyBakeUIIncrement(bpy.types.Operator):
         elif self.target == target.DECREASE_WIDTH and context.scene.bakeWidth > 4:
             context.scene.bakeWidth = context.scene.bakeWidth / 2
         else:
-            self.report(
-                    {bln.WARNING},
-                    "No valid target set")
+            pass
         return {bln.FINISHED}
 
 
 class EasyBakeUIHide(bpy.types.Operator):
     """hide object"""
-    bl_idname = "brm.bakeuihide"
+    bl_idname = brm.UI_HIDE
     bl_label = "hide"
     bl_options = {bln.UNDO}
     targetmesh: bpy.props.StringProperty()
