@@ -671,8 +671,8 @@ classes = (
 
 
 def register():
-    for cls in classes:
-        bpy.utils.register_class(cls)
+    for b_cls in classes:
+        bpy.utils.register_class(b_cls)
     bpy.types.Scene.lowpoly = bpy.props.PointerProperty(
         name="lowpoly", type=bpy.types.Object, description="lowpoly object")
     bpy.types.Scene.lowpolyActive = bpy.props.BoolProperty(
@@ -753,8 +753,8 @@ def register():
 
 
 def unregister():
-    for cls in reversed(classes):
-        bpy.utils.unregister_class(cls)
+    for b_cls in reversed(classes):
+        bpy.utils.unregister_class(b_cls)
 
 
 if __name__ == "__main__":
