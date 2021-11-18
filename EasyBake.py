@@ -102,6 +102,20 @@ def unhide(objectType):
         objectType.hide_viewport = False
 
 
+def hidden(objectType):
+    if objectType is None:
+        hid = False
+        try:
+            for o in objectType.objects:
+                if o.hide_viewport:
+                    return True
+        except AttributeError:
+            pass
+        return False
+    else:
+        return objectType.hide_viewport
+
+
 def hide(objectType):
     if objectType is None:
         for o in objectType.objects:
@@ -143,10 +157,10 @@ class PANEL_PT_EasyBakeUIPanel(bpy.types.Panel):
                 "objects",
                 text="",
                 icon=icon.MESH_ICOSPHERE)
-        if context.scene.lowpolyActive is True:
-            hideicon = icon.HIDE_OFF
-        if context.scene.lowpolyActive is False:
+        if hidden(context.scene.lowpoly):
             hideicon = icon.HIDE_ON
+        else:
+            hideicon = icon.HIDE_OFF
         op = row.operator(brm.UI_HIDE, text="", icon=hideicon)
         op.targetmesh = "lowpoly"
         row = col.row(align=True)
@@ -168,10 +182,10 @@ class PANEL_PT_EasyBakeUIPanel(bpy.types.Panel):
                 text="",
                 icon=icon.MESH_UVSPHERE)
         row.enabled = not context.scene.UseLowOnly
-        if context.scene.hipolyActive is True:
-            hideicon = icon.HIDE_OFF
-        if context.scene.hipolyActive is False:
+        if hidden(context.scene.hipoly):
             hideicon = icon.HIDE_ON
+        else:
+            hideicon = icon.HIDE_OFF
         op = row.operator(brm.UI_HIDE, text="", icon=hideicon)
         op.targetmesh = "hipoly"
         col = box.column(align=True)
@@ -378,47 +392,28 @@ class EasyBakeUIIncrement(bpy.types.Operator):
 class EasyBakeUIHide(bpy.types.Operator):
     """hide object"""
     bl_idname = brm.UI_HIDE
-    bl_label = "hide"
+    bl_label = "Hide"
     bl_options = {bln.UNDO}
     targetmesh: bpy.props.StringProperty()
 
     def execute(self, context):
-        # test if collection:
-        if context.scene.hipoly.bl_rna.name == rna.COLLECTION:
-            print("i am a collection!")
-        if context.scene.hipoly.bl_rna.name == rna.OBJECT:
-            print("i am an object!")
-        # print(context.scene.hipoly)
-        # print(context.scene.lowpoly)
-        # test lowpoly/hipoly exists
         if bpy.context.object.mode == bln.EDIT:
             bpy.ops.object.mode_set(mode=bln.OBJECT)
-        if self.targetmesh == "lowpoly":
-            if context.scene.lowpoly is None and context.scene.lowpoly not in bpy.data.collections:
-                self.report(
-                    {bln.WARNING},
-                    "Select a valid lowpoly object or collection!")
-                return {bln.FINISHED}
-            else:
-                if context.scene.lowpolyActive is True:
-                    context.scene.lowpolyActive = False
-                    hide(context.scene.lowpoly)
-                else:
-                    context.scene.lowpolyActive = True
-                    unhide(context.scene.lowpoly)
+        target = context.scene.lowpoly
+        if not self.targetmesh:
+            self.targetmesh = "lowpoly"
         if self.targetmesh == "hipoly":
-            if context.scene.hipoly is None and context.scene.hipoly not in bpy.data.collections:
-                self.report(
-                    {bln.WARNING},
-                    "Select a valid hipoly object or collection!")
-                return {bln.FINISHED}
+            target = context.scene.hipoly
+        if target is None and target not in bpy.data.collections:
+            self.report(
+                {bln.WARNING},
+                "Select a valid {0} object or collection!".format(self.targetmesh))
+            return {bln.FINISHED}
+        else:
+            if hidden(target):
+                unhide(target)
             else:
-                if context.scene.hipolyActive is True:
-                    context.scene.hipolyActive = False
-                    hide(context.scene.hipoly)
-                else:
-                    context.scene.hipolyActive = True
-                    unhide(context.scene.hipoly)
+                hide(target)
         return {bln.FINISHED}
 
 
@@ -438,15 +433,11 @@ class EasyBakeUIToggle(bpy.types.Operator):
         if context.scene.hipoly is None and context.scene.hipoly not in bpy.data.collections:
             self.report({bln.WARNING}, "Select a valid hipoly object or group!")
             return {bln.FINISHED}
-        if context.scene.lowpolyActive is True:
-            context.scene.lowpolyActive = False
+        if hidden(context.scene.hipoly):
             hide(context.scene.lowpoly)
-            context.scene.hipolyActive = True
             unhide(context.scene.hipoly)
         else:
-            context.scene.lowpolyActive = True
             unhide(context.scene.lowpoly)
-            context.scene.hipolyActive = False
             hide(context.scene.hipoly)
         return {bln.FINISHED}
 
@@ -460,6 +451,8 @@ class EasyBake(bpy.types.Operator):
     def execute(self, context):
         # test if everything is set up OK first:
         # test folder
+        hipoly_inactive = hidden(context.scene.hipoly)
+        lopoly_incative = hidden(context.scene.lowpoly)
         hasfolder = os.access(context.scene.bakeFolder, os.W_OK)
         if hasfolder is False:
             self.report({bln.WARNING}, "Select a valid export folder!")
@@ -517,8 +510,11 @@ class EasyBake(bpy.types.Operator):
         # temporary until I figure out how hiding is actually handled
         bpy.ops.object.hide_view_clear()
     # 2 make sure we are in object mode and nothing is selected
-        if bpy.context.object.mode == bln.EDIT:
-            bpy.ops.object.mode_set(mode=bln.OBJECT)
+        try:
+            if bpy.context.object.mode == bln.EDIT:
+                bpy.ops.object.mode_set(mode=bln.OBJECT)
+        except AttributeError:
+            pass
         bpy.ops.object.select_all(action=bln.DESELECT)
     # 3 setup lowpoly for baking
         lowpolyobject = "null"
@@ -605,11 +601,18 @@ class EasyBake(bpy.types.Operator):
         print("whats happening here?")
         print(context.scene.lowpoly)
         print(lowpolyobject)
-        #bpy.context.view_layer.objects.active = bpy.data.objects[lowpolyobject]
-        bpy.context.view_layer.objects.active = lowpolyobject
+        if isinstance(context.scene.lowpoly, bpy.types.Collection):
+            bpy.context.view_layer.objects.active = bpy.data.objects[lowpolyobject]
+        else:
+            bpy.context.view_layer.objects.active = lowpolyobject
     # 9 select lowpoly material and create temporary render target
-        orig_mat = bpy.context.active_object.data.materials[0]
-        bpy.context.active_object.data.materials[0] = bakemat
+        orig_mat = None
+        if bpy.context.active_object.data.materials:
+            orig_mat = bpy.context.active_object.data.materials[0]
+            bpy.context.active_object.data.materials[0] = bakemat
+        else:
+            bpy.context.active_object.data.materials.append(bakemat)
+        bpy.context.active_object.active_material_index = 0
         node_tree = bakemat.node_tree
         node = node_tree.nodes.new("ShaderNodeTexImage")
         node.select = True
@@ -709,7 +712,8 @@ class EasyBake(bpy.types.Operator):
         bpy.data.images.remove(bakeimage)
         bakemat.node_tree.nodes.remove(node)
         bpy.data.materials.remove(bakemat)
-        bpy.context.active_object.data.materials[0] = orig_mat
+        if orig_mat:
+            bpy.context.active_object.data.materials[0] = orig_mat
         bpy.data.scenes[bpy.context.scene.name].render.engine = orig_renderer
         if context.scene.lowpolyGroup:
             bpy.ops.object.select_all(action=bln.DESELECT)
@@ -719,8 +723,8 @@ class EasyBake(bpy.types.Operator):
         for image in bpy.data.images:
             image.reload()
         # rehide back to original state
-        if context.scene.lowpolyActive is True:
-            if context.scene.lowpoly is None:
+        if not lopoly_incative:
+            if isinstance(context.scene.lowpoly, bpy.types.Collection):
                 for o in context.scene.lowpoly.objects:
                     o.hide_viewport = False
                     context.view_layer.objects.active = o
@@ -734,8 +738,8 @@ class EasyBake(bpy.types.Operator):
             else:
                 context.scene.lowpoly.hide_viewport = True
         if not context.scene.UseLowOnly:
-            if context.scene.hipolyActive is True:
-                if context.scene.hipoly is None:
+            if not hipoly_inactive:
+                if isinstance(context.scene.hipoly, bpy.types.Collection):
                     for o in context.scene.hipoly.objects:
                         o.hide_viewport = False
                         context.view_layer.objects.active = o
@@ -765,14 +769,10 @@ def register():
         bpy.utils.register_class(b_cls)
     bpy.types.Scene.lowpoly = bpy.props.PointerProperty(
         name="lowpoly", type=bpy.types.Object, description="lowpoly object")
-    bpy.types.Scene.lowpolyActive = bpy.props.BoolProperty(
-        name="lowpolyActive", default=True, description="lowpolyActive")
     bpy.types.Scene.lowpolyGroup = bpy.props.BoolProperty(
         name="lowpolyGroup", default=False, description="enable lowpoly collection")
     bpy.types.Scene.hipoly = bpy.props.PointerProperty(
         name="hipoly", type=bpy.types.Object, description="hipoly object or group")
-    bpy.types.Scene.hipolyActive = bpy.props.BoolProperty(
-        name="hipolyActive", default=True, description="hipolyActive")
     bpy.types.Scene.hipolyGroup = bpy.props.BoolProperty(
         name="hipolyGroup", default=False, description="enable hipoly collection")
     bpy.types.Scene.cage = bpy.props.StringProperty(
