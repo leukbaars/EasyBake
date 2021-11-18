@@ -346,35 +346,6 @@ class PANEL_PT_EasyBakeUIPanel(bpy.types.Panel):
         row.prop(context.scene, "UseLowOnly", icon=icon.MESH_ICOSPHERE, text="")
 
 
-class EasyBakeUIToggle(bpy.types.Operator):
-    """toggle lowpoly/hipoly"""
-    bl_idname = brm.UI_TOGGLE
-    bl_label = "Toggle"
-    bl_options = {bln.UNDO}
-
-    def execute(self, context):
-        if bpy.context.object.mode == bln.EDIT:
-            bpy.ops.object.mode_set(mode=bln.OBJECT)
-        # test lowpoly/hipoly exists
-        if context.scene.lowpoly is None and context.scene.lowpoly not in bpy.data.collections:
-            self.report({bln.WARNING}, "Select a valid lowpoly object or group!")
-            return {bln.FINISHED}
-        if context.scene.hipoly is None and context.scene.hipoly not in bpy.data.collections:
-            self.report({bln.WARNING}, "Select a valid hipoly object or group!")
-            return {bln.FINISHED}
-        if context.scene.lowpolyActive is True:
-            context.scene.lowpolyActive = False
-            hide(context.scene.lowpoly)
-            context.scene.hipolyActive = True
-            unhide(context.scene.hipoly)
-        else:
-            context.scene.lowpolyActive = True
-            unhide(context.scene.lowpoly)
-            context.scene.hipolyActive = False
-            hide(context.scene.hipoly)
-        return {bln.FINISHED}
-
-
 class EasyBakeUIIncrement(bpy.types.Operator):
     """Double or half the size of the render target"""
     bl_idname = brm.UI_INCREMENT
@@ -448,6 +419,35 @@ class EasyBakeUIHide(bpy.types.Operator):
                 else:
                     context.scene.hipolyActive = True
                     unhide(context.scene.hipoly)
+        return {bln.FINISHED}
+
+
+class EasyBakeUIToggle(bpy.types.Operator):
+    """toggle lowpoly/hipoly"""
+    bl_idname = brm.UI_TOGGLE
+    bl_label = "Toggle"
+    bl_options = {bln.UNDO}
+
+    def execute(self, context):
+        if bpy.context.object.mode == bln.EDIT:
+            bpy.ops.object.mode_set(mode=bln.OBJECT)
+        # test lowpoly/hipoly exists
+        if context.scene.lowpoly is None and context.scene.lowpoly not in bpy.data.collections:
+            self.report({bln.WARNING}, "Select a valid lowpoly object or group!")
+            return {bln.FINISHED}
+        if context.scene.hipoly is None and context.scene.hipoly not in bpy.data.collections:
+            self.report({bln.WARNING}, "Select a valid hipoly object or group!")
+            return {bln.FINISHED}
+        if context.scene.lowpolyActive is True:
+            context.scene.lowpolyActive = False
+            hide(context.scene.lowpoly)
+            context.scene.hipolyActive = True
+            unhide(context.scene.hipoly)
+        else:
+            context.scene.lowpolyActive = True
+            unhide(context.scene.lowpoly)
+            context.scene.hipolyActive = False
+            hide(context.scene.hipoly)
         return {bln.FINISHED}
 
 
