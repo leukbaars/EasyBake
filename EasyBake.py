@@ -574,7 +574,7 @@ class EasyBake(bpy.types.Operator):
         #    return {bln.FINISHED}
     # 5 remember render engine and switch to CYCLES for baking
         orig_renderer = bpy.data.scenes[bpy.context.scene.name].render.engine
-        bpy.data.scenes[bpy.context.scene.name].render.engine = "CYCLES"
+        bpy.data.scenes[bpy.context.scene.name].render.engine = bln.CYCLES
     # 6 create temporary bake image and material
         bakeimage = bpy.data.images.new(
             "BakeImage",
