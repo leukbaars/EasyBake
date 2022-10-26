@@ -98,12 +98,12 @@ class EasyBakeUIPanel(bpy.types.Panel):
         col.separator()
         row = col.row(align = True)
         row.prop(context.scene.render.bake, "cage_extrusion", text="Ray Distance")
-        row.prop(context.scene, "cageEnabled", icon="OBJECT_DATAMODE", text="")
+        #row.prop(context.scene, "cageEnabled", icon="OBJECT_DATAMODE", text="")
         row = col.row(align = True)
         #row.enabled = context.scene.cageEnabled
         
-        if context.scene.cageEnabled:
-            op = row.prop_search(context.scene, "cage", bpy.data, "objects", text="", icon="MESH_UVSPHERE")
+        #if context.scene.cageEnabled:
+        #    op = row.prop_search(context.scene, "cage", bpy.data, "objects", text="", icon="MESH_UVSPHERE")
         #op.enabled = context.scene.cageEnabled
         
         col.separator()
@@ -141,7 +141,7 @@ class EasyBakeUIPanel(bpy.types.Panel):
         col = box.column(align=True)
         
         row = col.row(align = True)
-        row.enabled = not context.scene.UseLowOnly
+        #row.enabled = not context.scene.UseLowOnly
         
         if not context.scene.bakeNormal:
             row.prop(context.scene, "bakeNormal", icon="SHADING_RENDERED", text="Tangent Normal")
@@ -151,7 +151,7 @@ class EasyBakeUIPanel(bpy.types.Panel):
             row.prop(context.scene, "samplesNormal", text="")
 
         row = col.row(align = True)
-        row.enabled = not context.scene.UseLowOnly
+        #row.enabled = not context.scene.UseLowOnly
         if not context.scene.bakeObject:
             row.prop(context.scene, "bakeObject", icon="SHADING_RENDERED", text="Object Normal")
         if context.scene.bakeObject:
@@ -168,7 +168,7 @@ class EasyBakeUIPanel(bpy.types.Panel):
             row.prop(context.scene, "samplesAO", text="")
         
         row = col.row(align = True)
-        row.enabled = not context.scene.UseLowOnly
+        #row.enabled = not context.scene.UseLowOnly
         if not context.scene.bakeColor:
             row.prop(context.scene, "bakeColor", icon="SHADING_TEXTURE", text="Color")
         if context.scene.bakeColor:
@@ -177,7 +177,7 @@ class EasyBakeUIPanel(bpy.types.Panel):
             row.prop(context.scene, "samplesColor", text="")
 
         row = col.row(align = True)
-        row.enabled = not context.scene.UseLowOnly
+        #row.enabled = not context.scene.UseLowOnly
         if not context.scene.bakeRoughness:
             row.prop(context.scene, "bakeRoughness", icon="SHADING_TEXTURE", text="Roughness")
         if context.scene.bakeRoughness:
@@ -186,13 +186,14 @@ class EasyBakeUIPanel(bpy.types.Panel):
             row.prop(context.scene, "samplesRoughness", text="")
             
         row = col.row(align = True)
-        row.enabled = not context.scene.UseLowOnly
+        #row.enabled = not context.scene.UseLowOnly
         if not context.scene.bakeEmission:
             row.prop(context.scene, "bakeEmission", icon="SHADING_TEXTURE", text="Emission")
         if context.scene.bakeEmission:
             row.prop(context.scene, "bakeEmission", icon="SHADING_TEXTURE", text=" ")
             row.prop(context.scene, "affixEmission", text="")
             row.prop(context.scene, "samplesEmission", text="")
+            row.prop(context.scene, "bakeEmissionLinear", icon="NODE_TEXTURE", text="")
 
         row = col.row(align = True)
         if not context.scene.bakeUV:
@@ -268,11 +269,11 @@ class EasyBakeUIIncrement(bpy.types.Operator):
 
     def execute(self, context):
         if self.target == "width/2" and context.scene.bakeWidth > 4:
-            context.scene.bakeWidth = context.scene.bakeWidth / 2
+            context.scene.bakeWidth = context.scene.bakeWidth // 2
         if self.target == "width*2":
             context.scene.bakeWidth = context.scene.bakeWidth * 2
         if self.target == "height/2" and context.scene.bakeHeight > 4:
-            context.scene.bakeHeight = context.scene.bakeHeight / 2
+            context.scene.bakeHeight = context.scene.bakeHeight // 2
         if self.target == "height*2":
             context.scene.bakeHeight = context.scene.bakeHeight * 2
         return {'FINISHED'}
@@ -371,24 +372,26 @@ class EasyBake(bpy.types.Operator):
             self.report({'WARNING'}, "Select a valid export folder!")
             return {'FINISHED'}
 
-
+        
         #test lowpoly/hipoly/cage exists
         
         if context.scene.lowpoly is None and not context.scene.lowpoly in bpy.data.collections:
             self.report({'WARNING'}, "Select a valid lowpoly object or collection!")
             return {'FINISHED'}
+            
         if context.scene.hipoly is None and not context.scene.hipoly in bpy.data.collections and not context.scene.UseLowOnly:
             self.report({'WARNING'}, "Select a valid hipoly object or collection!")
             return {'FINISHED'}
-        if bpy.data.objects.get(context.scene.cage) is None and context.scene.cageEnabled:
-            self.report({'WARNING'}, "Select a valid cage object!")
-            return {'FINISHED'}
+            
+        #if bpy.data.objects.get(context.scene.cage) is None and context.scene.cageEnabled:
+        #    self.report({'WARNING'}, "Select a valid cage object!")
+        #   return {'FINISHED'}
 
-
+        
         #test if lowpoly, highpoly and cage objects are actually models
         lowpolymeshes = 0
 
-        if context.scene.lowpoly.bl_rna.name == "Collection":
+        if context.scene.lowpolyGroup == True:
             for o in bpy.context.scene.lowpoly.all_objects:
                 if o.type == 'MESH':
                     lowpolymeshes+=1
@@ -399,9 +402,11 @@ class EasyBake(bpy.types.Operator):
             self.report({'WARNING'}, "lowpoly needs to have a mesh!")
             return {'FINISHED'}   
         
+        
+        
         if not context.scene.UseLowOnly:
             hipolymeshes = 0
-            if context.scene.hipoly.bl_rna.name == "Collection":
+            if context.scene.hipolyGroup == True:
                 for o in bpy.context.scene.hipoly.all_objects:
                     if o.type == 'MESH':
                         hipolymeshes+=1
@@ -429,27 +434,56 @@ class EasyBake(bpy.types.Operator):
         unhide(context.scene.lowpoly)
         bpy.ops.object.hide_view_clear() #temporary until I figure out how hiding is actually handled
         
+        
+        
     #2 make sure we are in object mode and nothing is selected
         if bpy.context.object.mode == 'EDIT':
             bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='DESELECT')
+        
+        
 
     #3 setup lowpoly for baking
         lowpolyobject = "null"
         orig_lowpoly = None
-
+        
+        #print("still working")
+        #return {'FINISHED'} 
+        
         #if collection, create temporary lowpoly object
-        if context.scene.lowpoly.bl_rna.name == "Collection":
+        if context.scene.lowpolyGroup == True:
+
+            #print("still working")
+            #return {'FINISHED'} 
             context.scene.lowpoly.hide_render = False
-            for o in bpy.context.scene.lowpoly.all_objects:
+
+            #collections crash fix
+            low_objects_names = [obj.name for obj in bpy.context.scene.lowpoly.all_objects]
+            for o in low_objects_names:
+    
+            #for o in bpy.context.scene.lowpoly.all_objects:
         #if context.scene.lowpoly is None:   
         #    context.scene.lowpoly.hide_render = False
         #    for o in context.scene.lowpoly.objects:
-                if o.type == 'MESH':
-                    o.hide_viewport = False
-                    o.select_set(state=True)
-                    context.view_layer.objects.active = o
-                    o.hide_render = True
+        
+ 
+                if bpy.data.objects[o].type == 'MESH':
+                    #print("its a mesh")
+                    #return {'FINISHED'}  
+
+                    bpy.data.objects[o].hide_viewport = False    
+                    
+                    bpy.data.objects[o].select_set(state=True)
+                    
+                    context.view_layer.objects.active = bpy.data.objects[o]
+                    
+                    bpy.data.objects[o].hide_render = True
+                    
+            #print(bpy.context.scene.lowpoly.all_objects)
+            #print("still working")
+
+            #return {'FINISHED'}       
+            
             #duplicate selected and combine into new object
             bpy.ops.object.duplicate()
             bpy.ops.object.join()
@@ -457,11 +491,25 @@ class EasyBake(bpy.types.Operator):
             lowpolyobject = bpy.context.selected_objects[0].name
             bpy.data.objects[lowpolyobject].hide_render = False
         else:
+            bpy.ops.object.select_all(action='DESELECT')
+            
+            #context.scene.lowpoly.select_set(state=True)
             context.scene.lowpoly.hide_viewport = False
             context.scene.lowpoly.hide_render = False
             context.scene.lowpoly.select_set(state=True)
+            
             orig_lowpoly = context.scene.lowpoly
             lowpolyobject = context.scene.lowpoly
+            
+        #print("still working")
+        #return {'FINISHED'} 
+            
+    # if bake to self, create a temporary lowpoly duplicate to bake self to:
+        if context.scene.UseLowOnly:
+            bpy.ops.object.duplicate()
+            bpy.context.active_object.name = "temp_hipoly"
+            context.scene.hipoly = bpy.context.active_object
+            #return {'FINISHED'}
 
     # test if cage has same tri count:
         if context.scene.cageEnabled:
@@ -500,29 +548,33 @@ class EasyBake(bpy.types.Operator):
         bakeimage = bpy.data.images.new("BakeImage", width=context.scene.bakeWidth, height=context.scene.bakeHeight)
         bakemat = bpy.data.materials.new(name="bakemat")
         bakemat.use_nodes = True
-
+        
     #7 select hipoly target
-        if not context.scene.UseLowOnly:
+        #if not context.scene.UseLowOnly:
         #select hipoly object or collection:
-            if context.scene.hipoly.bl_rna.name == "Collection":
-                context.scene.hipoly.hide_render = False
-                for o in bpy.context.scene.hipoly.all_objects:
-                    if o.type == 'MESH':
-                        o.hide_viewport = False
-                        o.hide_render = False
-                        o.select_set(state=True)
-            else:
-                context.scene.hipoly.hide_viewport = False
-                context.scene.hipoly.hide_render = False
+        if context.scene.hipoly.bl_rna.name == "Collection":
+            context.scene.hipoly.hide_render = False
+            for o in bpy.context.scene.hipoly.all_objects:
+                if o.type == 'MESH':
+                    o.hide_viewport = False
+                    o.hide_render = False
+                    o.select_set(state=True)
+        else:
+            context.scene.hipoly.hide_viewport = False
+            context.scene.hipoly.hide_render = False
 
-                context.scene.hipoly.select_set(state=True)
+            context.scene.hipoly.select_set(state=True)
 
     #8 select lowpoly target
         print("whats happening here?")
         print(context.scene.lowpoly)
         print(lowpolyobject)
         #bpy.context.view_layer.objects.active = bpy.data.objects[lowpolyobject]
-        bpy.context.view_layer.objects.active = lowpolyobject
+        #print(bpy.data.objects[lowpolyobject])
+        if context.scene.lowpolyGroup == True:
+            bpy.context.view_layer.objects.active = bpy.data.objects[lowpolyobject]
+        else:
+            bpy.context.view_layer.objects.active = lowpolyobject
 
     #9 select lowpoly material and create temporary render target
         orig_mat = bpy.context.active_object.data.materials[0]
@@ -548,7 +600,7 @@ class EasyBake(bpy.types.Operator):
 
 
     #11 bake all maps!
-        if context.scene.bakeNormal and not context.scene.UseLowOnly:
+        if context.scene.bakeNormal:
 
             bpy.context.scene.cycles.samples = context.scene.samplesNormal
             bpy.ops.object.bake(type='NORMAL', use_clear=True, use_selected_to_active=True, normal_space='TANGENT')
@@ -556,7 +608,7 @@ class EasyBake(bpy.types.Operator):
             bakeimage.file_format = 'TARGA'
             bakeimage.save()
         
-        if context.scene.bakeObject and not context.scene.UseLowOnly:
+        if context.scene.bakeObject:
 
             bpy.context.scene.cycles.samples = context.scene.samplesObject
             bpy.ops.object.bake(type='NORMAL', use_clear=True, use_selected_to_active=True, normal_space='OBJECT')
@@ -567,12 +619,12 @@ class EasyBake(bpy.types.Operator):
         if context.scene.bakeAO:
 
             bpy.context.scene.cycles.samples = context.scene.samplesAO
-            bpy.ops.object.bake(type='AO', use_clear=True, use_selected_to_active=not context.scene.UseLowOnly)
+            bpy.ops.object.bake(type='AO', use_clear=True, use_selected_to_active=True)
             bakeimage.filepath_raw = context.scene.bakeFolder+context.scene.bakePrefix+context.scene.affixAO+".tga"
             bakeimage.file_format = 'TARGA'
             bakeimage.save()
 
-        if context.scene.bakeColor and not context.scene.UseLowOnly:
+        if context.scene.bakeColor:
 
             bpy.context.scene.cycles.samples = context.scene.samplesColor
             bpy.context.scene.render.bake.use_pass_direct = False
@@ -583,7 +635,7 @@ class EasyBake(bpy.types.Operator):
             bakeimage.file_format = 'TARGA'
             bakeimage.save()
         
-        if context.scene.bakeRoughness and not context.scene.UseLowOnly:
+        if context.scene.bakeRoughness:
 
             bpy.context.scene.cycles.samples = context.scene.samplesRoughness
             bpy.ops.object.bake(type='ROUGHNESS', use_clear=True, use_selected_to_active=True)
@@ -591,9 +643,16 @@ class EasyBake(bpy.types.Operator):
             bakeimage.file_format = 'TARGA'
             bakeimage.save()
             
-        if context.scene.bakeEmission and not context.scene.UseLowOnly:
+        if context.scene.bakeEmission:
 
             bpy.context.scene.cycles.samples = context.scene.samplesEmission
+            
+            print("colorspace")
+            print(bakeimage.colorspace_settings.name)
+            
+            if context.scene.bakeEmissionLinear:
+                bakeimage.colorspace_settings.name="Linear"
+            
             bpy.ops.object.bake(type='EMIT', use_clear=True, use_selected_to_active=True)
             bakeimage.filepath_raw = context.scene.bakeFolder+context.scene.bakePrefix+context.scene.affixEmission+".tga"
             bakeimage.file_format = 'TARGA'
@@ -626,10 +685,18 @@ class EasyBake(bpy.types.Operator):
             bpy.ops.object.select_all(action='DESELECT')
             bpy.data.objects[lowpolyobject].select_set(state=True)
             bpy.ops.object.delete(use_global=False)
+            
+        if context.scene.UseLowOnly:
+            #bpy.ops.object.select_all(action='DESELECT')
+            context.scene.hipoly.select_set(state=True)
+            #return {'FINISHED'}
+            bpy.ops.object.delete(use_global=False)
+            #return {'FINISHED'}
 
         #reload all textures
         for image in bpy.data.images:
             image.reload()
+             
 
         #rehide back to original state 
         if context.scene.lowpolyActive is True:
@@ -639,7 +706,9 @@ class EasyBake(bpy.types.Operator):
                     context.view_layer.objects.active = o
             else:
                 context.scene.lowpoly.hide_viewport = False
-                context.view_layer.objects.active = context.scene.lowpoly
+                #context.view_layer.objects.active = context.scene.lowpoly
+
+
         else:
             if context.scene.lowpoly is None:
                 for o in context.scene.lowpoly.objects:
@@ -701,6 +770,7 @@ def register():
     bpy.types.Scene.bakeColor = bpy.props.BoolProperty (name = "bakeColor",default = False,description = "Bake Albedo Color Map")
     bpy.types.Scene.bakeRoughness = bpy.props.BoolProperty (name = "bakeRoughness",default = False,description = "Bake Roughness Map")
     bpy.types.Scene.bakeEmission = bpy.props.BoolProperty (name = "bakeEmission",default = False,description = "Bake Emission Map") 
+    bpy.types.Scene.bakeEmissionLinear = bpy.props.BoolProperty (name = "bakeEmissionLinear",default = False,description = "Use Linear") 
     bpy.types.Scene.bakeUV = bpy.props.BoolProperty (name = "bakeUV",default = False,description = "Bake UV Wireframe Snapshot of Lowpoly Mesh")
     
     bpy.types.Scene.samplesNormal = bpy.props.IntProperty (name = "samplesNormal",default = 8,description = "Tangent Space Normal Map Sample Count")
